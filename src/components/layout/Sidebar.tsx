@@ -12,8 +12,11 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
+  const { signOut } = useAuth();
+  
   const menuItems = [
     { icon: Home, label: "Home", href: "/" },
     { icon: Map, label: "Journey Map", href: "/journey" },
@@ -56,6 +59,7 @@ export function Sidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/10"
+          onClick={signOut}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Logout
