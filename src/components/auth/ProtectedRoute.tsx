@@ -2,8 +2,16 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 
+// Check if Supabase is configured
+const isMissingCredentials = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+
+  // Skip authentication if Supabase isn't configured (development mode)
+  if (isMissingCredentials) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return (

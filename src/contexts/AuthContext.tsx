@@ -16,13 +16,21 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Check if Supabase is configured
+const isMissingCredentials = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!isMissingCredentials);
   const { toast } = useToast();
 
   useEffect(() => {
+    if (isMissingCredentials) {
+      setIsLoading(false);
+      return;
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -52,6 +60,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithGoogle = async () => {
+    if (isMissingCredentials) {
+      toast({
+        title: 'Configuration missing',
+        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -66,6 +83,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithFacebook = async () => {
+    if (isMissingCredentials) {
+      toast({
+        title: 'Configuration missing',
+        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
@@ -80,6 +106,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signInWithTwitter = async () => {
+    if (isMissingCredentials) {
+      toast({
+        title: 'Configuration missing',
+        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
@@ -94,6 +129,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (isMissingCredentials) {
+      toast({
+        title: 'Configuration missing',
+        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
