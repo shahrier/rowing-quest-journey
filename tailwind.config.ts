@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,24 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				ocean: {
+					50: "#f0f9ff",
+					100: "#e0f2fe",
+					200: "#bae6fd",
+					300: "#7dd3fc",
+					400: "#38bdf8",
+					500: "#0ea5e9",
+					600: "#0284c7",
+					700: "#0369a1",
+					800: "#075985",
+					900: "#0c4a6e",
+					950: "#082f49",
+				},
+				energy: {
+					400: "#fb923c",
+					500: "#f97316",
+					600: "#ea580c",
 				}
 			},
 			borderRadius: {
@@ -84,11 +103,22 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'wave': {
+					'0%': { transform: 'translateX(0) translateY(0)' },
+					'50%': { transform: 'translateX(10px) translateY(-5px)' },
+					'100%': { transform: 'translateX(0) translateY(0)' },
+				},
+				'pulse-slow': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.7' },
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'wave': 'wave 3s ease-in-out infinite',
+				'pulse-slow': 'pulse-slow 4s ease-in-out infinite'
 			}
 		}
 	},
