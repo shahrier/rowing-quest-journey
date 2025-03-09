@@ -3,8 +3,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { AppRole } from "@/types/auth";
 
-// Check if Supabase is configured
-const isMissingCredentials = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Check if Supabase is configured - updated to use actual environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const isMissingCredentials = !supabaseUrl || !supabaseAnonKey;
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -16,6 +18,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
 
   // Skip authentication if Supabase isn't configured (development mode)
   if (isMissingCredentials) {
+    console.warn('Supabase credentials are missing. Authentication is bypassed.');
     return <>{children}</>;
   }
 
