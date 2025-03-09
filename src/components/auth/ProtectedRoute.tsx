@@ -3,9 +3,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
 import { AppRole } from "@/types/auth";
 
-// Check if Supabase is configured - updated to use actual environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Hardcoded values for Supabase configuration
+const supabaseUrl = 'https://lqdvtghdufzwrtuszuhr.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZHZ0Z2hkdWZ6d3J0dXN6dWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1NTQ2MDYsImV4cCI6MjA1NzEzMDYwNn0.BBPiOdTjXE2ArG6yttLkcmeK9VVirdyD0NTi7HxcDVQ';
 const isMissingCredentials = !supabaseUrl || !supabaseAnonKey;
 
 interface ProtectedRouteProps {

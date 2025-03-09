@@ -4,21 +4,18 @@ import { AppRole } from '@/types/auth';
 
 // Replace these with your Supabase project URL and anon key
 // These are safe to expose in the client
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = 'https://lqdvtghdufzwrtuszuhr.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZHZ0Z2hkdWZ6d3J0dXN6dWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1NTQ2MDYsImV4cCI6MjA1NzEzMDYwNn0.BBPiOdTjXE2ArG6yttLkcmeK9VVirdyD0NTi7HxcDVQ';
 
-// For development without Supabase credentials
+// Check if credentials are valid
 const isMissingCredentials = !supabaseUrl || !supabaseAnonKey;
 
 if (isMissingCredentials) {
   console.warn('Missing Supabase credentials. Authentication features will not work until you add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.');
 }
 
-// Create a dummy client if credentials are missing (for development)
-export const supabase = createClient(
-  supabaseUrl || 'https://placeholder-url.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
-);
+// Create Supabase client
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Function to check if a user has a specific role
 export const hasRole = async (userId: string, role: AppRole): Promise<boolean> => {
