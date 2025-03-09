@@ -21,6 +21,7 @@ export default function Login() {
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerName, setRegisterName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isProcessingSocial, setIsProcessingSocial] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -58,6 +59,33 @@ export default function Login() {
     setIsSubmitting(true);
     await signUp(registerEmail, registerPassword, registerName);
     setIsSubmitting(false);
+  };
+
+  const handleSocialSignIn = async (provider: 'google' | 'facebook' | 'twitter') => {
+    try {
+      setIsProcessingSocial(true);
+      
+      switch(provider) {
+        case 'google':
+          await signInWithGoogle();
+          break;
+        case 'facebook': 
+          await signInWithFacebook();
+          break;
+        case 'twitter':
+          await signInWithTwitter();
+          break;
+      }
+    } catch (error) {
+      console.error(`Error signing in with ${provider}:`, error);
+      toast({
+        title: `${provider.charAt(0).toUpperCase() + provider.slice(1)} Sign-In Error`,
+        description: "This authentication provider may not be configured. Please check your Supabase settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingSocial(false);
+    }
   };
 
   return (
@@ -130,9 +158,10 @@ export default function Login() {
 
             <div className="grid grid-cols-1 gap-4">
               <Button 
-                onClick={signInWithGoogle} 
+                onClick={() => handleSocialSignIn('google')} 
                 variant="outline" 
                 className="w-full flex items-center justify-center gap-2 py-6"
+                disabled={isProcessingSocial}
               >
                 <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg">
                   <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
@@ -146,18 +175,20 @@ export default function Login() {
               </Button>
 
               <Button 
-                onClick={signInWithFacebook} 
+                onClick={() => handleSocialSignIn('facebook')} 
                 variant="outline" 
                 className="w-full flex items-center justify-center gap-2 py-6"
+                disabled={isProcessingSocial}
               >
                 <Facebook className="text-[#1877F2]" />
                 Continue with Facebook
               </Button>
 
               <Button 
-                onClick={signInWithTwitter} 
+                onClick={() => handleSocialSignIn('twitter')} 
                 variant="outline" 
                 className="w-full flex items-center justify-center gap-2 py-6"
+                disabled={isProcessingSocial}
               >
                 <Twitter className="text-[#1DA1F2]" />
                 Continue with Twitter
