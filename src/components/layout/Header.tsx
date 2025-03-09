@@ -1,5 +1,5 @@
 
-import { Bell, LogOut, Menu } from "lucide-react";
+import { Bell, LogOut, Menu, Settings, Shield, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
 import { useAuth } from "@/contexts/AuthContext";
+import { Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +19,7 @@ import {
 
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, profile, isAdmin, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -33,8 +34,8 @@ export function Header() {
   const getInitials = () => {
     if (!user) return 'JD';
     
-    if (user.user_metadata?.full_name) {
-      const nameParts = user.user_metadata.full_name.split(' ');
+    if (profile?.full_name) {
+      const nameParts = profile.full_name.split(' ');
       if (nameParts.length >= 2) {
         return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
       }
@@ -91,7 +92,7 @@ export function Header() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Avatar className="cursor-pointer">
-                <AvatarImage src={user?.user_metadata?.avatar_url || ""} />
+                <AvatarImage src={profile?.avatar_url || ""} />
                 <AvatarFallback className="bg-ocean-100 text-ocean-700">
                   {getInitials()}
                 </AvatarFallback>
@@ -99,8 +100,29 @@ export function Header() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>
-                {user?.user_metadata?.full_name || user?.email || "My Account"}
+                {profile?.full_name || user?.email || "My Account"}
               </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/profile" className="cursor-pointer flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
+              </DropdownMenuItem>
+              {isAdmin && (
+                <DropdownMenuItem asChild>
+                  <Link to="/admin" className="cursor-pointer flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span>Admin Panel</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem asChild>
+                <Link to="/settings" className="cursor-pointer flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  <span>Settings</span>
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="cursor-pointer flex items-center gap-2"

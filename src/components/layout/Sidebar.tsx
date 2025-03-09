@@ -9,13 +9,14 @@ import {
   LogOut,
   Map,
   Settings,
+  Shield,
   User,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
   
   const menuItems = [
     { icon: Home, label: "Home", href: "/" },
@@ -27,6 +28,11 @@ export function Sidebar() {
     { icon: User, label: "Profile", href: "/profile" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];
+
+  // Add admin dashboard link for admin users
+  if (isAdmin) {
+    menuItems.push({ icon: Shield, label: "Admin", href: "/admin" });
+  }
 
   return (
     <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground pt-5 pb-10 w-64">
