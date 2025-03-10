@@ -11,6 +11,13 @@ import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
+import JourneyMapPage from "./pages/JourneyMapPage";
+import StatsPage from "./pages/StatsPage";
+import TrainingPage from "./pages/TrainingPage";
+import TeamPage from "./pages/TeamPage";
+import AchievementsPage from "./pages/AchievementsPage";
+import ProfilePage from "./pages/ProfilePage";
+import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -25,12 +32,18 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/" element={<Index />} />
+              <Route path="/journey" element={<JourneyMapPage />} />
+              <Route path="/stats" element={<StatsPage />} />
+              <Route path="/training" element={<TrainingPage />} />
+              <Route path="/team" element={<TeamPage />} />
+              <Route path="/achievements" element={<AchievementsPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/admin" element={
                 <ProtectedRoute requiredRole="admin">
                   <Admin />
                 </ProtectedRoute>
               } />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
