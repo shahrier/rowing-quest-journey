@@ -41,8 +41,10 @@ interface RouteMapProps {
 export const RouteMap: React.FC<RouteMapProps> = ({ className }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  // Use the provided token if no token in localStorage
+  const defaultToken = 'pk.eyJ1IjoiZW1vbnNoYWhyaWVyIiwiYSI6ImNtODJnZjFzejBjbDQyam9ncTZ3cXhod20ifQ.M-GWDvnQh6ABad5o4eyM5Q';
   const [mapboxToken, setMapboxToken] = useState<string | null>(
-    localStorage.getItem('mapbox_token')
+    localStorage.getItem('mapbox_token') || defaultToken
   );
   
   const initializeMap = (token: string) => {
@@ -74,13 +76,14 @@ export const RouteMap: React.FC<RouteMapProps> = ({ className }) => {
       bounds.extend([coord[0], coord[1]]);
     });
     
-    // Create the map
+    // Create the map - fix the padding issue by using 'fitBounds' after creation
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
       style: 'mapbox://styles/mapbox/light-v11',
-      bounds: bounds,
-      padding: 50,
     });
+    
+    // Use fitBounds separately to apply padding
+    map.current.fitBounds(bounds, { padding: 50 });
     
     // Add navigation controls
     map.current.addControl(
@@ -208,6 +211,13 @@ export const RouteMap: React.FC<RouteMapProps> = ({ className }) => {
         .addTo(map.current);
     });
   };
+
+  // Initialize the map with the token if it exists
+  useEffect(() => {
+    if (mapboxToken) {
+      initializeMap(mapboxToken);
+    }
+  }, []);
 
   return (
     <div className={className}>
