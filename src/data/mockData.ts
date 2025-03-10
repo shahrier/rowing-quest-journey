@@ -164,7 +164,7 @@ export const journeyPoints: JourneyPoint[] = [
     id: "p6",
     name: "Rotterdam",
     description: "Final destination",
-    distanceFromStart: TOTAL_JOURNEY_DISTANCE,
+    distanceFromStart: TOTAL_JOURNEY_DISTANCE_KM,
     isReached: false,
     coordinates: { lat: 51.9244, lng: 4.4777 },
   },
