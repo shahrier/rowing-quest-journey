@@ -1,10 +1,11 @@
 
 import { Progress } from "@/components/ui/progress";
-import { TOTAL_JOURNEY_DISTANCE, getTeamCompletionPercentage, getTeamTotalDistance } from "@/data/mockData";
+import { TOTAL_JOURNEY_DISTANCE_KM, getTeamCompletionPercentage, getTeamTotalDistance } from "@/data/mockData";
 
 export function ProgressBar() {
   const completionPercentage = getTeamCompletionPercentage();
-  const totalDistance = getTeamTotalDistance();
+  const totalDistanceKm = getTeamTotalDistance();
+  const totalDistanceM = totalDistanceKm * 1000;
   
   return (
     <div className="space-y-2">
@@ -18,7 +19,7 @@ export function ProgressBar() {
       />
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>Boston</span>
-        <span>{totalDistance.toLocaleString()} of {TOTAL_JOURNEY_DISTANCE.toLocaleString()} km</span>
+        <span>{totalDistanceM.toLocaleString()} of {(TOTAL_JOURNEY_DISTANCE_KM * 1000).toLocaleString()} m</span>
         <span>Rotterdam</span>
       </div>
     </div>

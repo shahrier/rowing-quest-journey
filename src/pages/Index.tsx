@@ -7,14 +7,15 @@ import { JourneyMap } from "@/components/dashboard/JourneyMap";
 import { RecentAchievements } from "@/components/dashboard/RecentAchievements";
 import { LogDistanceForm } from "@/components/forms/LogDistanceForm";
 import { LogStrengthForm } from "@/components/forms/LogStrengthForm";
-import { TOTAL_JOURNEY_DISTANCE, currentUser, getTeamCompletionPercentage, getTeamTotalDistance, mockUsers } from "@/data/mockData";
+import { TOTAL_JOURNEY_DISTANCE_KM, currentUser, getTeamCompletionPercentage, getTeamTotalDistance, mockUsers } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
-  const totalDistanceRowed = getTeamTotalDistance();
+  const totalDistanceRowedKm = getTeamTotalDistance();
   const completionPercentage = getTeamCompletionPercentage();
   const totalStrengthSessions = mockUsers.reduce((total, user) => total + user.strengthSessions, 0);
-  const remainingDistance = TOTAL_JOURNEY_DISTANCE - totalDistanceRowed;
+  const remainingDistanceKm = TOTAL_JOURNEY_DISTANCE_KM - totalDistanceRowedKm;
+  const totalDistanceRowedM = totalDistanceRowedKm * 1000;
   
   return (
     <div className="space-y-6">
@@ -30,21 +31,21 @@ const Index = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatsCard
           title="Total Distance"
-          value={`${totalDistanceRowed.toLocaleString()} km`}
-          description={`${(totalDistanceRowed / 12).toFixed(1)} km per person average`}
+          value={`${totalDistanceRowedM.toLocaleString()} m`}
+          description={`${Math.round(totalDistanceRowedM / mockUsers.length).toLocaleString()} m per person average`}
           icon={Ship}
           trend={{ value: 12, isPositive: true }}
         />
         <StatsCard
           title="Distance Remaining"
-          value={`${remainingDistance.toLocaleString()} km`}
+          value={`${(remainingDistanceKm * 1000).toLocaleString()} m`}
           description={`${completionPercentage}% of journey completed`}
           icon={MapPin}
         />
         <StatsCard
           title="Strength Sessions"
           value={totalStrengthSessions}
-          description={`${(totalStrengthSessions / 12).toFixed(1)} sessions per person`}
+          description={`${(totalStrengthSessions / mockUsers.length).toFixed(1)} sessions per person`}
           icon={Dumbbell}
           trend={{ value: 8, isPositive: true }}
         />

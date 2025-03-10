@@ -7,7 +7,7 @@ import { Medal } from "lucide-react";
 export function TeamRanking() {
   // Sort users by rowing distance in descending order
   const sortedUsers = [...mockUsers].sort(
-    (a, b) => b.rowingDistanceKm - a.rowingDistanceKm
+    (a, b) => b.rowingDistanceM - a.rowingDistanceM
   );
 
   // Take top 5 users
@@ -75,7 +75,7 @@ function RankingItem({ user, rank }: RankingItemProps) {
 
       <div className="text-right">
         <p className="text-sm font-semibold">
-          {user.rowingDistanceKm.toLocaleString()} km
+          {user.rowingDistanceM.toLocaleString()} m
         </p>
       </div>
     </div>

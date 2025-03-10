@@ -31,7 +31,7 @@ export function LogDistanceForm() {
     setTimeout(() => {
       toast({
         title: "Distance logged successfully!",
-        description: `You've added ${distance} km to your journey.`,
+        description: `You've added ${distance} m to your journey.`,
       });
       
       setDistance("");
@@ -50,14 +50,14 @@ export function LogDistanceForm() {
         <CardContent className="space-y-4">
           <div className="space-y-1">
             <label htmlFor="distance" className="text-sm font-medium">
-              Distance (km)
+              Distance (m)
             </label>
             <Input
               id="distance"
               type="number"
-              step="0.1"
+              step="1"
               min="0"
-              placeholder="Enter distance in kilometers"
+              placeholder="Enter distance in meters"
               value={distance}
               onChange={(e) => setDistance(e.target.value)}
               required

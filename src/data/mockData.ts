@@ -1,13 +1,14 @@
 
 import { Achievement, JourneyPoint, User } from "./types";
 
-export const TOTAL_JOURNEY_DISTANCE = 5556; // km from Boston to Rotterdam
+export const TOTAL_JOURNEY_DISTANCE_KM = 5556; // km from Boston to Rotterdam
+export const TOTAL_JOURNEY_DISTANCE_M = TOTAL_JOURNEY_DISTANCE_KM * 1000; // m from Boston to Rotterdam
 
 export const currentUser: User = {
   id: "u1",
   name: "Jane Doe",
   email: "jane@example.com",
-  rowingDistanceKm: 120,
+  rowingDistanceM: 120000, // Changed from 120 km to 120000 m
   strengthSessions: 8,
   achievements: ["a1", "a3"],
   joinedAt: new Date("2023-01-15"),
@@ -19,7 +20,7 @@ export const mockUsers: User[] = [
     id: "u2",
     name: "John Smith",
     email: "john@example.com",
-    rowingDistanceKm: 155,
+    rowingDistanceM: 155000, // Changed from 155 km to 155000 m
     strengthSessions: 12,
     achievements: ["a1", "a2", "a3"],
     joinedAt: new Date("2023-01-10"),
@@ -28,7 +29,7 @@ export const mockUsers: User[] = [
     id: "u3",
     name: "Emma Wilson",
     email: "emma@example.com",
-    rowingDistanceKm: 200,
+    rowingDistanceM: 200000, // Changed from 200 km to 200000 m
     strengthSessions: 15,
     achievements: ["a1", "a2", "a3", "a4"],
     joinedAt: new Date("2023-01-05"),
@@ -37,7 +38,7 @@ export const mockUsers: User[] = [
     id: "u4",
     name: "Michael Brown",
     email: "michael@example.com",
-    rowingDistanceKm: 180,
+    rowingDistanceM: 180000, // Changed from 180 km to 180000 m
     strengthSessions: 10,
     achievements: ["a1", "a3"],
     joinedAt: new Date("2023-01-20"),
@@ -46,7 +47,7 @@ export const mockUsers: User[] = [
     id: "u5",
     name: "Olivia Davis",
     email: "olivia@example.com",
-    rowingDistanceKm: 110,
+    rowingDistanceM: 110000, // Changed from 110 km to 110000 m
     strengthSessions: 7,
     achievements: ["a1"],
     joinedAt: new Date("2023-01-25"),
@@ -55,7 +56,7 @@ export const mockUsers: User[] = [
     id: "u6",
     name: "William Johnson",
     email: "william@example.com",
-    rowingDistanceKm: 90,
+    rowingDistanceM: 90000, // Changed from 90 km to 90000 m
     strengthSessions: 5,
     achievements: ["a1"],
     joinedAt: new Date("2023-02-01"),
@@ -64,7 +65,7 @@ export const mockUsers: User[] = [
     id: "u7",
     name: "Sophia Miller",
     email: "sophia@example.com",
-    rowingDistanceKm: 220,
+    rowingDistanceM: 220000, // Changed from 220 km to 220000 m
     strengthSessions: 18,
     achievements: ["a1", "a2", "a3", "a4"],
     joinedAt: new Date("2023-01-03"),
@@ -73,7 +74,7 @@ export const mockUsers: User[] = [
     id: "u8",
     name: "James Taylor",
     email: "james@example.com",
-    rowingDistanceKm: 135,
+    rowingDistanceM: 135000, // Changed from 135 km to 135000 m
     strengthSessions: 9,
     achievements: ["a1", "a3"],
     joinedAt: new Date("2023-01-18"),
@@ -82,7 +83,7 @@ export const mockUsers: User[] = [
     id: "u9",
     name: "Charlotte Anderson",
     email: "charlotte@example.com",
-    rowingDistanceKm: 105,
+    rowingDistanceM: 105000, // Changed from 105 km to 105000 m
     strengthSessions: 6,
     achievements: ["a1"],
     joinedAt: new Date("2023-01-28"),
@@ -91,7 +92,7 @@ export const mockUsers: User[] = [
     id: "u10",
     name: "Benjamin Thomas",
     email: "benjamin@example.com",
-    rowingDistanceKm: 175,
+    rowingDistanceM: 175000, // Changed from 175 km to 175000 m
     strengthSessions: 11,
     achievements: ["a1", "a2", "a3"],
     joinedAt: new Date("2023-01-12"),
@@ -100,7 +101,7 @@ export const mockUsers: User[] = [
     id: "u11",
     name: "Amelia Jackson",
     email: "amelia@example.com",
-    rowingDistanceKm: 160,
+    rowingDistanceM: 160000, // Changed from 160 km to 160000 m
     strengthSessions: 13,
     achievements: ["a1", "a2", "a3"],
     joinedAt: new Date("2023-01-08"),
@@ -109,7 +110,7 @@ export const mockUsers: User[] = [
     id: "u12",
     name: "Daniel White",
     email: "daniel@example.com",
-    rowingDistanceKm: 190,
+    rowingDistanceM: 190000, // Changed from 190 km to 190000 m
     strengthSessions: 14,
     achievements: ["a1", "a2", "a3", "a4"],
     joinedAt: new Date("2023-01-06"),
@@ -206,21 +207,21 @@ export const achievements: Achievement[] = [
 
 // Calculate team's total distance
 export const getTeamTotalDistance = () => {
-  return mockUsers.reduce((total, user) => total + user.rowingDistanceKm, 0);
+  return mockUsers.reduce((total, user) => total + user.rowingDistanceM, 0) / 1000; // Convert to km for display
 };
 
 // Calculate team's completion percentage
 export const getTeamCompletionPercentage = () => {
-  const totalDistance = getTeamTotalDistance();
-  return Math.min(Math.round((totalDistance / TOTAL_JOURNEY_DISTANCE) * 100), 100);
+  const totalDistanceKm = getTeamTotalDistance();
+  return Math.min(Math.round((totalDistanceKm / TOTAL_JOURNEY_DISTANCE_KM) * 100), 100);
 };
 
 // Calculate current journey position
 export const getCurrentJourneyPosition = () => {
-  const totalDistance = getTeamTotalDistance();
+  const totalDistanceKm = getTeamTotalDistance();
   
   // Find the last reached point and the next point
-  const lastReachedPointIndex = journeyPoints.findIndex(point => point.distanceFromStart > totalDistance) - 1;
+  const lastReachedPointIndex = journeyPoints.findIndex(point => point.distanceFromStart > totalDistanceKm) - 1;
   
   if (lastReachedPointIndex < 0) {
     return journeyPoints[0];
@@ -235,7 +236,7 @@ export const getCurrentJourneyPosition = () => {
   
   // Calculate how far between these two points we are
   const distanceBetweenPoints = nextPoint.distanceFromStart - lastReachedPoint.distanceFromStart;
-  const distanceTraveled = totalDistance - lastReachedPoint.distanceFromStart;
+  const distanceTraveled = totalDistanceKm - lastReachedPoint.distanceFromStart;
   const progressPercentage = distanceTraveled / distanceBetweenPoints;
   
   // Interpolate coordinates
@@ -248,6 +249,6 @@ export const getCurrentJourneyPosition = () => {
     ...lastReachedPoint,
     coordinates: { lat, lng },
     nextPointName: nextPoint.name,
-    distanceToNextPoint: Math.round(nextPoint.distanceFromStart - totalDistance),
+    distanceToNextPoint: Math.round(nextPoint.distanceFromStart - totalDistanceKm),
   };
 };

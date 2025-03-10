@@ -4,7 +4,7 @@ export interface User {
   name: string;
   avatar?: string;
   email: string;
-  rowingDistanceKm: number;
+  rowingDistanceM: number; // Changed from rowingDistanceKm to rowingDistanceM
   strengthSessions: number;
   achievements: string[];
   joinedAt: Date;
@@ -26,7 +26,7 @@ export interface JourneyPoint {
 export interface RowingLog {
   id: string;
   userId: string;
-  distanceKm: number;
+  distanceM: number; // Changed from distanceKm to distanceM
   date: Date;
   notes?: string;
 }
