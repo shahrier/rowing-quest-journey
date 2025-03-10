@@ -1,11 +1,17 @@
-
 import { JourneyMap } from "@/components/dashboard/JourneyMap";
+import { RouteMap } from "@/components/dashboard/RouteMap";
 import { journeyPoints, getTeamTotalDistance } from "@/data/mockData";
+import { Progress } from "@/components/ui/progress";
 
 const JourneyMapPage = () => {
   const totalDistanceRowed = getTeamTotalDistance();
   const nextPoint = journeyPoints.find(point => point.distanceFromStart > totalDistanceRowed);
   const lastPoint = nextPoint ? journeyPoints[journeyPoints.indexOf(nextPoint) - 1] : journeyPoints[0];
+  
+  // Calculate progress percentage to next point
+  const progressToNextPoint = nextPoint ? 
+    ((totalDistanceRowed - lastPoint.distanceFromStart) / 
+    (nextPoint.distanceFromStart - lastPoint.distanceFromStart)) * 100 : 100;
   
   return (
     <div className="space-y-6">
@@ -34,6 +40,22 @@ const JourneyMapPage = () => {
             </div>
           </div>
           
+          {/* Progress to next checkpoint */}
+          {nextPoint && (
+            <div className="mb-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span>{lastPoint.name}</span>
+                <span>{nextPoint.name}</span>
+              </div>
+              <Progress value={progressToNextPoint} className="h-2"/>
+            </div>
+          )}
+          
+          {/* Route Map */}
+          <RouteMap className="mb-6" />
+          
+          {/* Keep the simplified visual representation as a fallback */}
+          <h3 className="text-lg font-semibold mb-2 mt-8">Simplified Journey View</h3>
           <JourneyMap />
         </div>
       </div>
