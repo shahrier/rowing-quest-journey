@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
-export const UpdateNotification = () => {
+function UpdateNotification() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [showReload, setShowReload] = useState<boolean>(false);
 
@@ -41,5 +41,7 @@ export const UpdateNotification = () => {
     }
   }, [waitingWorker]);
 
-  return null; // This component doesn't render anything visible
-};
+  return null;
+}
+
+export { UpdateNotification };
