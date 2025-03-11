@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Database, ToggleLeft, Trash2 } from "lucide-react";
+import { Database, ToggleLeft, Trash2, RefreshCw } from "lucide-react";
 import { getDataMode, toggleDataMode, deleteMockData } from "@/data/dataService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
@@ -37,7 +37,7 @@ export function DataModeToggle() {
       await deleteMockData();
       toast({
         title: "Mock Data Deleted",
-        description: "All demonstration data has been removed successfully.",
+        description: "All demonstration data has been removed.",
       });
     } catch (error) {
       console.error("Error deleting mock data:", error);
@@ -88,29 +88,51 @@ export function DataModeToggle() {
             ? 'Mock data is useful for demonstrations and testing. Disable it when you are ready for production.'
             : 'Real data mode shows only actual user-generated content. Mock data is hidden.'}
         </p>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm" disabled={isDeleting}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Mock Data
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Mock Data</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete all demonstration data. This action cannot be undone.
-                Real user data will not be affected.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteMockData} disabled={isDeleting}>
-                {isDeleting ? "Deleting..." : "Delete Mock Data"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <div className="space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setIsMockData(true);
+              toggleDataMode();
+              toast({
+                title: "Mock Data Restored",
+                description: "Demonstration data has been restored.",
+              });
+            }}
+            disabled={isMockData}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Restore Mock Data
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                disabled={isDeleting || !isMockData}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Mock Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Mock Data</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all demonstration data. This action cannot be undone.
+                  Real user data will not be affected.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteMockData} disabled={isDeleting}>
+                  {isDeleting ? "Deleting..." : "Delete Mock Data"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </CardFooter>
     </Card>
   );
