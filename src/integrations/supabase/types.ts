@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      journeys: {
+        Row: {
+          created_at: string | null
+          distance_km: number
+          end_location: string
+          id: string
+          name: string
+          start_location: string
+          team_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          distance_km: number
+          end_location: string
+          id?: string
+          name: string
+          start_location: string
+          team_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          distance_km?: number
+          end_location?: string
+          id?: string
+          name?: string
+          start_location?: string
+          team_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journeys_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -35,6 +73,74 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      team_memberships: {
+        Row: {
+          id: string
+          joined_at: string | null
+          role: Database["public"]["Enums"]["team_role"]
+          team_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["team_role"]
+          team_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["team_role"]
+          team_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_memberships_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_memberships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -75,9 +181,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_team_manager: {
+        Args: {
+          team_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "user"
+      team_role: "manager" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
