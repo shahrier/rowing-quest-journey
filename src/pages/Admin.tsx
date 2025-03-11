@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, FileSpreadsheet, Users } from "lucide-react";
+import { Download, FileSpreadsheet, Users, Settings } from "lucide-react";
 import { mockUsers } from "@/data/mockData";
+import { DataModeToggle } from "@/components/admin/DataModeToggle";
+import { getUsers } from "@/data/dataService";
 
 interface UserData {
   id: string;
@@ -22,6 +24,7 @@ interface UserData {
 export default function Admin() {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
+  const [mockUserList, setMockUserList] = useState(mockUsers);
   const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState("");
   const { toast } = useToast();
@@ -56,6 +59,10 @@ export default function Admin() {
         );
 
         setUsers(usersWithRoles);
+        
+        // Also fetch mock users for the data tab
+        const appUsers = await getUsers();
+        setMockUserList(appUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
         toast({
@@ -221,6 +228,7 @@ export default function Admin() {
         <TabsList>
           <TabsTrigger value="users">User Management</TabsTrigger>
           <TabsTrigger value="data">User Data</TabsTrigger>
+          <TabsTrigger value="settings">System Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -312,7 +320,7 @@ export default function Admin() {
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center gap-2">
                   <Users className="h-5 w-5 text-muted-foreground" />
-                  <span className="font-medium">Total Users: {mockUsers.length}</span>
+                  <span className="font-medium">Total Users: {mockUserList.length}</span>
                 </div>
                 <Button onClick={exportUsersCSV}>
                   <FileSpreadsheet className="mr-2 h-4 w-4" />
@@ -328,7 +336,7 @@ export default function Admin() {
                   <div className="col-span-2">Strength</div>
                   <div className="col-span-2">Actions</div>
                 </div>
-                {mockUsers.map((user) => (
+                {mockUserList.map((user) => (
                   <div key={user.id} className="grid grid-cols-12 p-4 border-b last:border-b-0">
                     <div className="col-span-3 truncate">
                       {user.name}
@@ -389,6 +397,12 @@ export default function Admin() {
               </Button>
             </CardFooter>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <div className="grid gap-6">
+            <DataModeToggle />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
