@@ -8,9 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, FileSpreadsheet, Users, Settings } from "lucide-react";
+import { Download, FileSpreadsheet, Users, Settings, UserPlus } from "lucide-react";
 import { mockUsers } from "@/data/mockData";
 import { DataModeToggle } from "@/components/admin/DataModeToggle";
+import { TeamManagement } from "@/components/admin/TeamManagement";
+import { TeamMembers } from "@/components/admin/TeamMembers";
 import { getUsers } from "@/data/dataService";
 
 interface UserData {
@@ -220,13 +222,14 @@ export default function Admin() {
       <div>
         <h1 className="text-3xl font-bold mb-2">Admin Dashboard</h1>
         <p className="text-muted-foreground">
-          Manage users and system settings
+          Manage users, teams, and system settings
         </p>
       </div>
 
       <Tabs defaultValue="users">
         <TabsList>
           <TabsTrigger value="users">User Management</TabsTrigger>
+          <TabsTrigger value="team">Team Management</TabsTrigger>
           <TabsTrigger value="data">User Data</TabsTrigger>
           <TabsTrigger value="settings">System Settings</TabsTrigger>
         </TabsList>
@@ -308,6 +311,13 @@ export default function Admin() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="team">
+          <div className="grid gap-6">
+            <TeamManagement />
+            <TeamMembers />
+          </div>
         </TabsContent>
 
         <TabsContent value="data">

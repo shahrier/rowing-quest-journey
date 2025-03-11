@@ -4,6 +4,7 @@ import { mockUsers, achievements as mockAchievements, journeyPoints as mockJourn
 
 // LocalStorage key for mode
 const DATA_MODE_KEY = 'rowquest-data-mode';
+const MOCK_DATA_KEY = 'rowquest-mock-data';
 
 // Data mode: 'mock' or 'real'
 type DataMode = 'mock' | 'real';
@@ -24,6 +25,18 @@ export const toggleDataMode = (): DataMode => {
   const newMode: DataMode = currentMode === 'mock' ? 'real' : 'mock';
   setDataMode(newMode);
   return newMode;
+};
+
+// Delete all mock data
+export const deleteMockData = async (): Promise<void> => {
+  return new Promise((resolve) => {
+    // In a real app with a database, we would delete from the database
+    // For now, just clear any stored mock data in localStorage
+    localStorage.removeItem(MOCK_DATA_KEY);
+    
+    // Add a small delay to simulate an API call
+    setTimeout(resolve, 500);
+  });
 };
 
 // Get users based on current mode

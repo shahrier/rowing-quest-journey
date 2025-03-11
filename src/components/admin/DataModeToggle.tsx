@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Database, ToggleLeft } from "lucide-react";
-import { getDataMode, toggleDataMode } from "@/data/dataService";
+import { Database, ToggleLeft, Trash2 } from "lucide-react";
+import { getDataMode, toggleDataMode, deleteMockData } from "@/data/dataService";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export function DataModeToggle() {
   const [isMockData, setIsMockData] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -27,6 +29,26 @@ export function DataModeToggle() {
         ? 'The application will now use demonstration data.'
         : 'The application will now use real user data only.',
     });
+  };
+
+  const handleDeleteMockData = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteMockData();
+      toast({
+        title: "Mock Data Deleted",
+        description: "All demonstration data has been removed successfully.",
+      });
+    } catch (error) {
+      console.error("Error deleting mock data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete mock data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -60,12 +82,35 @@ export function DataModeToggle() {
           </div>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex justify-between">
         <p className="text-sm text-muted-foreground">
           {isMockData 
             ? 'Mock data is useful for demonstrations and testing. Disable it when you are ready for production.'
             : 'Real data mode shows only actual user-generated content. Mock data is hidden.'}
         </p>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" size="sm" disabled={isDeleting}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Mock Data
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Mock Data</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete all demonstration data. This action cannot be undone.
+                Real user data will not be affected.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteMockData} disabled={isDeleting}>
+                {isDeleting ? "Deleting..." : "Delete Mock Data"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardFooter>
     </Card>
   );

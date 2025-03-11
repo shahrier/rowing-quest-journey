@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function Login() {
   const { user, signIn, signUp, signInWithGoogle, signInWithFacebook, signInWithTwitter } = useAuth();
@@ -20,6 +21,8 @@ export default function Login() {
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
   const [registerName, setRegisterName] = useState("");
+  const [registerTeamName, setRegisterTeamName] = useState("");
+  const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingSocial, setIsProcessingSocial] = useState(false);
 
@@ -51,6 +54,15 @@ export default function Login() {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (isCreatingTeam && !registerTeamName) {
+      toast({
+        title: "Missing team name",
+        description: "Please provide a team name",
         variant: "destructive",
       });
       return;
@@ -100,7 +112,7 @@ export default function Login() {
           </div>
           <h1 className="mt-6 text-3xl font-bold">Welcome to RowQuest</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Track your team's rowing journey from Boston to Rotterdam
+            Track your team's rowing journey to your destination
           </p>
         </div>
 
@@ -236,6 +248,34 @@ export default function Login() {
                   Password must be at least 6 characters long
                 </p>
               </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="create-team" 
+                  checked={isCreatingTeam}
+                  onCheckedChange={(checked) => {
+                    setIsCreatingTeam(checked as boolean);
+                  }}
+                />
+                <Label htmlFor="create-team">I want to create a new team</Label>
+              </div>
+              
+              {isCreatingTeam && (
+                <div className="space-y-2">
+                  <Label htmlFor="register-team-name">Team Name</Label>
+                  <Input 
+                    id="register-team-name" 
+                    type="text" 
+                    placeholder="Enter team name" 
+                    value={registerTeamName}
+                    onChange={(e) => setRegisterTeamName(e.target.value)}
+                    required={isCreatingTeam}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    As a team creator, you'll be the team manager with admin privileges
+                  </p>
+                </div>
+              )}
               
               <Button 
                 type="submit" 
