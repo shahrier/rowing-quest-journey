@@ -1,31 +1,23 @@
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+
+interface ServiceWorkerState {
+  waiting: ServiceWorker | null;
+}
 
 export function UpdateNotification() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
 
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
-        // If a waiting worker exists, show the update notification
         if (reg.waiting) {
           setWaitingWorker(reg.waiting);
-          
-          toast({
-            title: 'Update Available',
-            description: 'A new version of the app is available!',
-            action: (
-              <Button variant="outline" size="sm" onClick={updateServiceWorker}>
-                Reload
-              </Button>
-            ),
-            duration: Infinity
-          });
+          showUpdateToast();
         }
         
-        // Listen for new updates
         reg.addEventListener('updatefound', () => {
           const newWorker = reg.installing;
           
@@ -33,17 +25,7 @@ export function UpdateNotification() {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 setWaitingWorker(newWorker);
-                
-                toast({
-                  title: 'Update Available',
-                  description: 'A new version of the app is available!',
-                  action: (
-                    <Button variant="outline" size="sm" onClick={updateServiceWorker}>
-                      Reload
-                    </Button>
-                  ),
-                  duration: Infinity
-                });
+                showUpdateToast();
               }
             });
           }
@@ -52,7 +34,6 @@ export function UpdateNotification() {
         console.error('Service worker registration failed:', error);
       });
       
-      // Handle controller change
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
@@ -62,6 +43,23 @@ export function UpdateNotification() {
       });
     }
   }, []);
+
+  const showUpdateToast = () => {
+    toast({
+      title: 'Update Available',
+      description: 'A new version of the app is available!',
+      action: (
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={updateServiceWorker}
+        >
+          Reload
+        </Button>
+      ),
+      duration: Infinity
+    });
+  };
   
   const updateServiceWorker = () => {
     if (waitingWorker) {
