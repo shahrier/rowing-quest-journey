@@ -1,92 +1,45 @@
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
-// Define proper types for ServiceWorker related interfaces
-interface ServiceWorkerRegistration {
-  waiting: ServiceWorker | null;
-  installing: ServiceWorker | null;
-  updatefound: Event;
-  addEventListener: (event: string, callback: Function) => void;
-}
-
-interface ServiceWorker {
-  state: string;
-  postMessage: (data: any) => void;
-  addEventListener: (event: string, callback: Function) => void;
-}
-
-interface NavigatorWithServiceWorker extends Navigator {
-  serviceWorker: {
-    register: (path: string) => Promise<ServiceWorkerRegistration>;
-    controller: ServiceWorker | null;
-    addEventListener: (event: string, callback: Function) => void;
-  };
-}
-
-// React functional component
-export function UpdateNotification() {
+export const UpdateNotification = () => {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [showReload, setShowReload] = useState<boolean>(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      const nav = navigator as NavigatorWithServiceWorker;
-      
-      nav.serviceWorker.register('/sw.js').then(reg => {
-        if (reg.waiting) {
-          setWaitingWorker(reg.waiting);
-          showUpdateToast();
-        }
-        
-        reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && nav.serviceWorker.controller) {
-                setWaitingWorker(newWorker);
-                showUpdateToast();
-              }
-            });
-          }
-        });
-      }).catch(error => {
-        console.error('Service worker registration failed:', error);
-      });
-      
-      let refreshing = false;
-      nav.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
-    }
-  }, []);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
 
-  const showUpdateToast = () => {
-    toast({
-      title: 'Update Available',
-      description: 'A new version of the app is available!',
-      action: (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={updateServiceWorker}
-        >
-          Reload
-        </Button>
-      ),
-      duration: Infinity
-    });
-  };
-  
-  const updateServiceWorker = () => {
-    if (waitingWorker) {
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              setWaitingWorker(newWorker);
+              setShowReload(true);
+              
+              toast('Update Available', {
+                description: 'A new version is available. Click here to update.',
+                action: {
+                  label: 'Update',
+                  onClick: () => {
+                    if (waitingWorker) {
+                      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+                      waitingWorker.addEventListener('statechange', () => {
+                        if (waitingWorker.state === 'activated') {
+                          window.location.reload();
+                        }
+                      });
+                    }
+                  }
+                }
+              });
+            }
+          });
+        });
+      });
     }
-  };
-  
-  return null;
-}
+  }, [waitingWorker]);
+
+  return null; // This component doesn't render anything visible
+};

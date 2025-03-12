@@ -1,11 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Database, RefreshCw, Trash2 } from "lucide-react";
-import { getDataMode, setDataMode, toggleDataMode, deleteMockData } from "@/data/dataService";
+import { Database, ToggleLeft, Trash2, RefreshCw } from "lucide-react";
+import { getDataMode, toggleDataMode, deleteMockData } from "@/data/dataService";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 export function DataModeToggle() {
@@ -50,15 +51,6 @@ export function DataModeToggle() {
     }
   };
 
-  const handleRestoreMockData = () => {
-    setIsMockData(true);
-    setDataMode('mock');
-    toast({
-      title: "Mock Data Restored",
-      description: "Demonstration data has been restored.",
-    });
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -100,7 +92,14 @@ export function DataModeToggle() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleRestoreMockData}
+            onClick={() => {
+              setIsMockData(true);
+              toggleDataMode();
+              toast({
+                title: "Mock Data Restored",
+                description: "Demonstration data has been restored.",
+              });
+            }}
             disabled={isMockData}
           >
             <RefreshCw className="h-4 w-4 mr-2" />

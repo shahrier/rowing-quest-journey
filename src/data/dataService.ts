@@ -1,3 +1,4 @@
+
 import { User, JourneyPoint, Achievement } from "./types";
 import { mockUsers, achievements as mockAchievements, journeyPoints as mockJourneyPoints, TOTAL_JOURNEY_DISTANCE_KM, TOTAL_JOURNEY_DISTANCE_M } from "./mockData";
 
@@ -133,7 +134,7 @@ export const getCurrentJourneyPosition = async (): Promise<any> => {
     ...lastReachedPoint,
     coordinates: { lat, lng },
     nextPointName: nextPoint.name,
-    distanceToNextPoint: Math.max(0, Math.round(nextPoint.distanceFromStart - totalDistanceKm)),
+    distanceToNextPoint: Math.round(nextPoint.distanceFromStart - totalDistanceKm),
   };
 };
 
