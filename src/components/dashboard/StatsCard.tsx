@@ -1,10 +1,11 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
   title: string;
   value: string | number;
-  icon: React.ComponentType;
+  icon: React.ComponentType<{ className?: string }>;
   description?: string;
   trend?: {
     value: number;

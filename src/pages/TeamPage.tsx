@@ -50,10 +50,10 @@ const TeamPage = () => {
             if (teamMembers && teamMembers.length > 0) {
               // Convert to User format
               const formattedUsers: User[] = teamMembers.map(member => ({
-                id: member.profiles.id,
-                name: member.profiles.full_name || 'Anonymous User',
-                email: member.profiles.email,
-                avatar: member.profiles.avatar_url,
+                id: member.profiles?.id || member.user_id,
+                name: member.profiles?.full_name || 'Anonymous User',
+                email: member.profiles?.email || '',
+                avatar: member.profiles?.avatar_url || '',
                 rowingDistanceM: 0, // We'll need to add a separate table for this
                 strengthSessions: 0, // We'll need to add a separate table for this
                 achievements: [], 
