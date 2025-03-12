@@ -3,16 +3,37 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 
-interface ServiceWorkerState {
+// Define proper types for ServiceWorker related interfaces
+interface ServiceWorkerRegistration {
   waiting: ServiceWorker | null;
+  installing: ServiceWorker | null;
+  updatefound: Event;
+  addEventListener: (event: string, callback: Function) => void;
 }
 
+interface ServiceWorker {
+  state: string;
+  postMessage: (data: any) => void;
+  addEventListener: (event: string, callback: Function) => void;
+}
+
+interface NavigatorWithServiceWorker extends Navigator {
+  serviceWorker: {
+    register: (path: string) => Promise<ServiceWorkerRegistration>;
+    controller: ServiceWorker | null;
+    addEventListener: (event: string, callback: Function) => void;
+  };
+}
+
+// React functional component
 export function UpdateNotification() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(reg => {
+      const nav = navigator as NavigatorWithServiceWorker;
+      
+      nav.serviceWorker.register('/sw.js').then(reg => {
         if (reg.waiting) {
           setWaitingWorker(reg.waiting);
           showUpdateToast();
@@ -23,7 +44,7 @@ export function UpdateNotification() {
           
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              if (newWorker.state === 'installed' && nav.serviceWorker.controller) {
                 setWaitingWorker(newWorker);
                 showUpdateToast();
               }
@@ -35,7 +56,7 @@ export function UpdateNotification() {
       });
       
       let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
+      nav.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
           refreshing = true;
           window.location.reload();

@@ -19,6 +19,7 @@ import AchievementsPage from "./pages/AchievementsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 
+// Create the query client outside of the component
 const queryClient = new QueryClient();
 
 const App = () => (

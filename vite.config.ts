@@ -11,8 +11,8 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react({
-      jsxRuntime: 'automatic',
-      tsDecorators: true,
+      jsxImportSource: "react",
+      plugins: [["@swc/plugin-transform-typescript", {}]],
     }),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
