@@ -4,24 +4,30 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 
 export function UpdateNotification() {
-  const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
-  const [showReload, setShowReload] = useState(false);
 
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(registration => {
-        setRegistration(registration);
-        
+      navigator.serviceWorker.register('/sw.js').then(reg => {
         // If a waiting worker exists, show the update notification
-        if (registration.waiting) {
-          setWaitingWorker(registration.waiting);
-          setShowReload(true);
+        if (reg.waiting) {
+          setWaitingWorker(reg.waiting);
+          
+          toast({
+            title: 'Update Available',
+            description: 'A new version of the app is available!',
+            action: (
+              <Button variant="outline" size="sm" onClick={updateServiceWorker}>
+                Reload
+              </Button>
+            ),
+            duration: Infinity
+          });
         }
         
         // Listen for new updates
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
           
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
