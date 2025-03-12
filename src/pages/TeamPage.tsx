@@ -47,7 +47,7 @@ const TeamPage = () => {
               `)
               .eq('team_id', memberships.team_id);
               
-            if (teamMembers) {
+            if (teamMembers && teamMembers.length > 0) {
               // Convert to User format
               const formattedUsers: User[] = teamMembers.map(member => ({
                 id: member.profiles.id,
