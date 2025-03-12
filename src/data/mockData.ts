@@ -1,8 +1,11 @@
-
 import { Achievement, JourneyPoint, User } from "./types";
 
 export const TOTAL_JOURNEY_DISTANCE_KM = 5556; // km from Boston to Rotterdam
 export const TOTAL_JOURNEY_DISTANCE_M = TOTAL_JOURNEY_DISTANCE_KM * 1000; // m from Boston to Rotterdam
+
+// Added mock data for testing purposes
+export const mockTeamName = "Atlantic Rowers";
+export const mockJourneyName = "Boston to Rotterdam";
 
 export const currentUser: User = {
   id: "u1",

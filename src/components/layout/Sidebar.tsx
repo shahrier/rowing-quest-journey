@@ -1,37 +1,25 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-  Award,
-  BarChart2,
-  Dumbbell,
-  Home,
-  LogOut,
-  Map,
-  Settings,
-  Shield,
-  User,
-  Users,
-} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function Sidebar() {
   const { signOut, isAdmin } = useAuth();
   
   const menuItems = [
-    { icon: Home, label: "Home", href: "/" },
-    { icon: Map, label: "Journey Map", href: "/journey" },
-    { icon: BarChart2, label: "Stats", href: "/stats" },
-    { icon: Dumbbell, label: "Training", href: "/training" },
-    { icon: Users, label: "Team", href: "/team" },
-    { icon: Award, label: "Achievements", href: "/achievements" },
-    { icon: User, label: "Profile", href: "/profile" },
-    { icon: Settings, label: "Settings", href: "/settings" },
+    { icon: () => <span>H</span>, label: "Home", href: "/" },
+    { icon: () => <span>M</span>, label: "Journey Map", href: "/journey" },
+    { icon: () => <span>S</span>, label: "Stats", href: "/stats" },
+    { icon: () => <span>T</span>, label: "Training", href: "/training" },
+    { icon: () => <span>TM</span>, label: "Team", href: "/team" },
+    { icon: () => <span>A</span>, label: "Achievements", href: "/achievements" },
+    { icon: () => <span>P</span>, label: "Profile", href: "/profile" },
+    { icon: () => <span>ST</span>, label: "Settings", href: "/settings" },
   ];
 
   // Add admin dashboard link for admin users
   if (isAdmin) {
-    menuItems.push({ icon: Shield, label: "Admin", href: "/admin" });
+    menuItems.push({ icon: () => <span>AD</span>, label: "Admin", href: "/admin" });
   }
 
   return (
@@ -54,7 +42,7 @@ export function Sidebar() {
               to={item.href}
               className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors"
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon />
               <span>{item.label}</span>
             </Link>
           ))}
@@ -67,7 +55,7 @@ export function Sidebar() {
           className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/10"
           onClick={signOut}
         >
-          <LogOut className="mr-2 h-5 w-5" />
+          <span className="mr-2">LO</span>
           Logout
         </Button>
       </div>

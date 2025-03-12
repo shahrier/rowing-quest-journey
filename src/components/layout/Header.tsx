@@ -1,5 +1,3 @@
-
-import { Bell, LogOut, Menu, Settings, Shield, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
@@ -62,7 +60,7 @@ export function Header() {
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-5 w-5" />
+                <span className="h-5 w-5">M</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
@@ -83,7 +81,7 @@ export function Header() {
 
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
+            <span className="h-5 w-5">B</span>
             <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-energy-500">
               3
             </Badge>
@@ -105,21 +103,21 @@ export function Header() {
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/profile" className="cursor-pointer flex items-center gap-2">
-                  <User className="h-4 w-4" />
+                  <span className="h-4 w-4">U</span>
                   <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem asChild>
                   <Link to="/admin" className="cursor-pointer flex items-center gap-2">
-                    <Shield className="h-4 w-4" />
+                    <span className="h-4 w-4">S</span>
                     <span>Admin Panel</span>
                   </Link>
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem asChild>
                 <Link to="/settings" className="cursor-pointer flex items-center gap-2">
-                  <Settings className="h-4 w-4" />
+                  <span className="h-4 w-4">S</span>
                   <span>Settings</span>
                 </Link>
               </DropdownMenuItem>
@@ -128,7 +126,7 @@ export function Header() {
                 className="cursor-pointer flex items-center gap-2"
                 onClick={signOut}
               >
-                <LogOut className="h-4 w-4" />
+                <span className="h-4 w-4">L</span>
                 <span>Log out</span>
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -1,4 +1,3 @@
-
 import { User } from '@supabase/supabase-js';
 
 export type AppRole = 'admin' | 'user';
@@ -16,6 +15,7 @@ export interface UserProfile {
 export interface AuthState {
   user: User | null;
   profile: UserProfile | null;
+  roles: AppRole[];
   isAdmin: boolean;
   isLoading: boolean;
 }

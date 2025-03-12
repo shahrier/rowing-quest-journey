@@ -1,11 +1,10 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { AppRole } from '@/types/auth';
 
 // Replace these with your Supabase project URL and anon key
 // These are safe to expose in the client
-const supabaseUrl = 'https://lqdvtghdufzwrtuszuhr.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZHZ0Z2hkdWZ6d3J0dXN6dWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1NTQ2MDYsImV4cCI6MjA1NzEzMDYwNn0.BBPiOdTjXE2ArG6yttLkcmeK9VVirdyD0NTi7HxcDVQ';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Check if credentials are valid
 const isMissingCredentials = !supabaseUrl || !supabaseAnonKey;
