@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Ship } from "lucide-react";
+<<<< UPDATED
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -142,7 +142,7 @@ export default function Login() {
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
             <div className="bg-ocean-600 p-3 rounded-full">
-              <Ship className="h-8 w-8 text-white" />
+              <div className="h-8 w-8 text-white flex items-center justify-center">RQ</div>
             </div>
           </div>
           <h1 className="text-3xl font-bold text-ocean-900">RowQuest</h1>
