@@ -1,37 +1,47 @@
 
-import { useState, useEffect } from 'react';
-import { toast } from "sonner";
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 export function UpdateNotification() {
-  const [refreshing, setRefreshing] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    // Setup service worker update handling
     if ('serviceWorker' in navigator) {
-      // When a new service worker is available
-      window.addEventListener('sw-update-found', () => {
-        toast.custom((id) => (
-          <div className="bg-background border rounded-lg shadow-lg p-4 mb-2">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium">Update available</h3>
-                <p className="text-sm text-muted-foreground">A new version of the app is available</p>
-              </div>
-              <button 
-                className="bg-primary text-primary-foreground px-3 py-1 rounded-md text-sm"
-                onClick={() => {
-                  setRefreshing(true);
-                  window.location.reload();
-                  toast.dismiss(id);
-                }}
-              >
-                {refreshing ? "Updating..." : "Update now"}
-              </button>
-            </div>
-          </div>
-        ), {
-          duration: Infinity,
+      // Listen for service worker updates
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        refreshing = true;
+        window.location.reload();
+      });
+
+      // Detect if there's a new service worker
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                setUpdateAvailable(true);
+                
+                toast.message('App update available', {
+                  description: 'Refresh the page to get the latest version',
+                  action: {
+                    label: 'Update now',
+                    onClick: () => window.location.reload(),
+                  },
+                  duration: 0, // Keep it until user acts
+                });
+              }
+            });
+          }
         });
+        
+        // Check for updates every 1 hour
+        setInterval(() => {
+          registration.update().catch(console.error);
+        }, 60 * 60 * 1000);
       });
     }
   }, []);

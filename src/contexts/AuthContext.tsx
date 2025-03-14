@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase, getUserRoles, hasRole } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
