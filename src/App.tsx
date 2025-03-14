@@ -18,39 +18,43 @@ import TeamPage from "./pages/TeamPage";
 import AchievementsPage from "./pages/AchievementsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import { ThemeProvider } from "./providers/ThemeProvider";
 
+// Create a client
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="/" element={<Index />} />
-              <Route path="/journey" element={<JourneyMapPage />} />
-              <Route path="/stats" element={<StatsPage />} />
-              <Route path="/training" element={<TrainingPage />} />
-              <Route path="/team" element={<TeamPage />} />
-              <Route path="/achievements" element={<AchievementsPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/admin" element={
-                <ProtectedRoute requiredRole="admin">
-                  <Admin />
-                </ProtectedRoute>
-              } />
-            </Route>
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <ThemeProvider defaultTheme="system">
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+                <Route path="/" element={<Index />} />
+                <Route path="/journey" element={<JourneyMapPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/training" element={<TrainingPage />} />
+                <Route path="/team" element={<TeamPage />} />
+                <Route path="/achievements" element={<AchievementsPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/admin" element={
+                  <ProtectedRoute requiredRole="admin">
+                    <Admin />
+                  </ProtectedRoute>
+                } />
+              </Route>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
