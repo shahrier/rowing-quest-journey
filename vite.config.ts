@@ -11,7 +11,11 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [
-    react(),
+    react({
+      // Configure SWC to properly handle TypeScript and JSX
+      tsDecorators: true,
+      plugins: []
+    }),
     mode === 'development' &&
     componentTagger(),
   ].filter(Boolean),
