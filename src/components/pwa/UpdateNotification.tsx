@@ -25,7 +25,7 @@ export function UpdateNotification() {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 setUpdateAvailable(true);
                 
-                toast.message('App update available', {
+                toast('App update available', {
                   description: 'Refresh the page to get the latest version',
                   action: {
                     label: 'Update now',
