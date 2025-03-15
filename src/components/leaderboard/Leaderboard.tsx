@@ -1,5 +1,6 @@
+
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -35,7 +36,7 @@ export function Leaderboard() {
           // Get team members' stats
           const { data, error } = await supabase
             .from('profiles')
-            .select(\`
+            .select(`
               id,
               user_id,
               full_name,
@@ -56,7 +57,7 @@ export function Leaderboard() {
                 FROM user_badges
                 WHERE user_badges.user_id = profiles.user_id
               ) as badge_count
-            \`)
+            `)
             .eq('team_id', profile.team_id)
             .order('total_distance', { ascending: false });
 
@@ -86,9 +87,9 @@ export function Leaderboard() {
   const renderLeaderboardRow = (entry: LeaderboardEntry, index: number) => (
     <div
       key={entry.user_id}
-      className={\`flex items-center justify-between p-3 \${
+      className={`flex items-center justify-between p-3 ${
         index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-      } \${entry.user_id === user?.id ? 'border-l-4 border-primary' : ''}\`}
+      } ${entry.user_id === user?.id ? 'border-l-4 border-primary' : ''}`}
     >
       <div className="flex items-center space-x-3">
         <span className="font-medium w-8">{index + 1}</span>
@@ -109,9 +110,9 @@ export function Leaderboard() {
   const renderStrengthLeaderboardRow = (entry: LeaderboardEntry, index: number) => (
     <div
       key={entry.user_id}
-      className={\`flex items-center justify-between p-3 \${
+      className={`flex items-center justify-between p-3 ${
         index % 2 === 0 ? 'bg-gray-50' : 'bg-white'
-      } \${entry.user_id === user?.id ? 'border-l-4 border-primary' : ''}\`}
+      } ${entry.user_id === user?.id ? 'border-l-4 border-primary' : ''}`}
     >
       <div className="flex items-center space-x-3">
         <span className="font-medium w-8">{index + 1}</span>

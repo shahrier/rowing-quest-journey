@@ -1,5 +1,6 @@
+
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,13 +49,13 @@ export function DataExport() {
       if (exportType === 'activities' || exportType === 'all') {
         const { data: activities } = await supabase
           .from('activities')
-          .select(\`
+          .select(`
             *,
             profiles:user_id (
               full_name,
               email
             )
-          \`)
+          `)
           .match(teamCondition);
         
         if (activities) {
@@ -77,7 +78,7 @@ export function DataExport() {
       if (exportType === 'badges' || exportType === 'all') {
         const { data: badges } = await supabase
           .from('user_badges')
-          .select(\`
+          .select(`
             *,
             badges (
               name,
@@ -90,7 +91,7 @@ export function DataExport() {
               full_name,
               email
             )
-          \`)
+          `)
           .match(teamCondition);
 
         if (badges) {
@@ -112,13 +113,13 @@ export function DataExport() {
       if (exportType === 'media' || exportType === 'all') {
         const { data: media } = await supabase
           .from('media')
-          .select(\`
+          .select(`
             *,
             profiles:user_id (
               full_name,
               email
             )
-          \`)
+          `)
           .match(teamCondition);
 
         if (media) {
@@ -146,7 +147,7 @@ export function DataExport() {
           csvContent += row.map(cell => {
             // Escape cells containing commas or quotes
             if (cell.toString().includes(',') || cell.toString().includes('"')) {
-              return \`"\${cell.toString().replace(/"/g, '""')}"\`;
+              return `"${cell.toString().replace(/"/g, '""')}"`;
             }
             return cell;
           }).join(',') + '\n';
@@ -159,7 +160,7 @@ export function DataExport() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm');
-      filename = \`rowquest_export_\${exportType}_\${timestamp}.csv\`;
+      filename = `rowquest_export_${exportType}_${timestamp}.csv`;
       
       link.setAttribute('href', url);
       link.setAttribute('download', filename);
