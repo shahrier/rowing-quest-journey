@@ -1,14 +1,13 @@
+import { Session, User } from '@supabase/supabase-js';
 
-import { User } from '@supabase/supabase-js';
-
-export type AppRole = 'admin' | 'user';
+export type AppRole = 'admin' | 'user' | 'team_manager';
 
 export interface UserProfile {
-  id: string;
+  user_id: string;
   email: string;
-  full_name?: string;
+  full_name: string;
   avatar_url?: string;
-  roles: AppRole[];
+  role: AppRole;
   created_at?: string;
   updated_at?: string;
 }
@@ -19,3 +18,8 @@ export interface AuthState {
   isAdmin: boolean;
   isLoading: boolean;
 }
+
+export type User = import('@supabase/supabase-js').User;
+export type Session = import('@supabase/supabase-js').Session;
+
+export { UserProfile };

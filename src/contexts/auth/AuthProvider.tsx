@@ -1,50 +1,48 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useEffect, useState } from 'react';
+import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { toast } from '@/hooks/use-toast';
 import { getUserRole, hasRole } from '@/lib/auth-utils';
-import { AuthContextType, UserProfile, User, Session } from './auth/types';
+import { useToast } from '@/hooks/use-toast';
+import { AppRole, UserProfile } from '@/types/auth';
+import { AuthContextType } from './types';
 
-export type { UserProfile };
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// Check if Supabase is configured
+const isMissingCredentials = !supabase || !supabase.auth;
 
-// Export AuthContext
-export { AuthContext };
-
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const isMissingCredentials = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const [isLoading, setIsLoading] = useState(!isMissingCredentials);
+  const { toast } = useToast();
 
-  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-  console.log('Supabase Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
-
-  const fetchUserProfile = useCallback(async (userId: string) => {
+  // Fetch user profile and roles
+  const fetchUserProfile = async (userId: string) => {
     if (!userId || isMissingCredentials) return null;
 
     try {
-      const [profileData, roles] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-          .then(({ data, error }) => {
-            if (error) throw error;
-            return data;
-          }),
-        getUserRole(userId)
-      ]);
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-      const userIsAdmin = await hasRole(userId, 'admin');
+      if (error) throw error;
+
+      const userIsAdmin = profileData.role === 'admin';
       setIsAdmin(userIsAdmin);
 
       const userProfile: UserProfile = {
-        ...profileData,
-        roles
+        id: profileData.user_id,
+        email: profileData.email,
+        full_name: profileData.full_name,
+        avatar_url: profileData.avatar_url,
+        role: profileData.role,
+        created_at: profileData.created_at,
+        updated_at: profileData.updated_at
       };
 
       setProfile(userProfile);
@@ -53,7 +51,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       console.error('Error fetching profile:', error);
       return null;
     }
-  }, [isMissingCredentials]);
+  };
 
   const refreshProfile = async () => {
     if (user) {
@@ -67,10 +65,11 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       return;
     }
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
+      
       if (session?.user) {
         fetchUserProfile(session.user.id).finally(() => {
           setIsLoading(false);
@@ -80,20 +79,23 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        fetchUserProfile(session.user.id);
-      } else {
-        setProfile(null);
-        setIsAdmin(false);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          fetchUserProfile(session.user.id);
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
       }
-    });
+    );
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile, isMissingCredentials]);
+  }, []);
 
   const handleError = (error: Error) => {
     console.error('Auth error:', error);
@@ -177,7 +179,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     });
     
     if (error) {
-      throw error;
+      handleError(error);
     }
   };
 
@@ -199,7 +201,7 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     });
     
     if (error) {
-      throw error;
+      handleError(error);
     }
   };
 
@@ -221,59 +223,36 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     });
     
     if (error) {
-      throw error;
+      handleError(error);
     }
   };
 
   const signOut = async () => {
-    if (isMissingCredentials) {
-      toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      toast({
-        title: 'Signed out successfully',
-      });
-    } catch (error) {
-      handleError(error as Error);
+    if (isMissingCredentials) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      handleError(error);
     }
   };
 
+  const value = {
+    user,
+    profile,
+    isAdmin,
+    session,
+    isLoading,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signInWithFacebook,
+    signInWithTwitter,
+    signOut,
+    refreshProfile,
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        isAdmin,
-        session,
-        isLoading,
-        signIn,
-        signUp,
-        signInWithGoogle,
-        signInWithFacebook,
-        signInWithTwitter,
-        signOut,
-        refreshProfile,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
-export default AuthProvider;
+}

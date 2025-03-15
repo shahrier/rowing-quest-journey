@@ -1,7 +1,6 @@
-
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase, makeUserAdmin } from "@/lib/supabase";
+import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +13,7 @@ import { DataModeToggle } from "@/components/admin/DataModeToggle";
 import { TeamManagement } from "@/components/admin/TeamManagement";
 import { TeamMembers } from "@/components/admin/TeamMembers";
 import { getUsers } from "@/data/dataService";
+import { AdminSetup } from "@/components/admin/AdminSetup";
 
 interface UserData {
   id: string;
@@ -24,7 +24,7 @@ interface UserData {
 }
 
 export default function Admin() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, profile } = useAuth();
   const [users, setUsers] = useState<UserData[]>([]);
   const [mockUserList, setMockUserList] = useState(mockUsers);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,23 +42,14 @@ export default function Admin() {
 
         if (profilesError) throw profilesError;
 
-        // Get admin status for each user
-        const usersWithRoles = await Promise.all(
-          profiles.map(async (profile) => {
-            const { data: isAdmin } = await supabase.rpc('has_role', {
-              _user_id: profile.id,
-              _role: 'admin'
-            });
-
-            return {
-              id: profile.id,
-              email: profile.email,
-              full_name: profile.full_name,
-              is_admin: isAdmin || false,
-              created_at: profile.created_at
-            };
-          })
-        );
+        // Map profiles to UserData
+        const usersWithRoles = profiles.map(profile => ({
+          id: profile.user_id,
+          email: profile.email,
+          full_name: profile.full_name,
+          is_admin: profile.role === 'admin',
+          created_at: profile.created_at
+        }));
 
         setUsers(usersWithRoles);
         
@@ -82,21 +73,22 @@ export default function Admin() {
 
   const handleMakeAdmin = async (userId: string) => {
     try {
-      const success = await makeUserAdmin(userId);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('user_id', userId);
       
-      if (success) {
-        toast({
-          title: 'Success',
-          description: 'User has been promoted to admin',
-        });
-        
-        // Update the local state
-        setUsers(users.map(user => 
-          user.id === userId ? { ...user, is_admin: true } : user
-        ));
-      } else {
-        throw new Error('Failed to promote user');
-      }
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: 'User has been promoted to admin',
+      });
+      
+      // Update the local state
+      setUsers(users.map(user => 
+        user.id === userId ? { ...user, is_admin: true } : user
+      ));
     } catch (error) {
       console.error('Error making admin:', error);
       toast({
@@ -134,23 +126,14 @@ export default function Admin() {
         return;
       }
 
-      // Get admin status for each user
-      const usersWithRoles = await Promise.all(
-        data.map(async (profile) => {
-          const { data: isAdmin } = await supabase.rpc('has_role', {
-            _user_id: profile.id,
-            _role: 'admin'
-          });
-
-          return {
-            id: profile.id,
-            email: profile.email,
-            full_name: profile.full_name,
-            is_admin: isAdmin || false,
-            created_at: profile.created_at
-          };
-        })
-      );
+      // Map profiles to UserData
+      const usersWithRoles = data.map(profile => ({
+        id: profile.user_id,
+        email: profile.email,
+        full_name: profile.full_name,
+        is_admin: profile.role === 'admin',
+        created_at: profile.created_at
+      }));
 
       setUsers(usersWithRoles);
     } catch (error) {
@@ -241,74 +224,79 @@ export default function Admin() {
               <CardDescription>Search for users and manage their roles</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 mb-6">
-                <div className="flex-1">
-                  <Label htmlFor="email-search">Search by email</Label>
-                  <div className="flex mt-2">
-                    <Input
-                      id="email-search"
-                      placeholder="user@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="flex-1"
-                    />
-                    <Button onClick={searchUser} className="ml-2">
-                      Search
-                    </Button>
-                  </div>
-                </div>
+              <div className="mb-6">
+                <AdminSetup />
               </div>
-
-              {isLoading ? (
-                <div className="flex justify-center my-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ocean-500"></div>
-                </div>
-              ) : (
-                <div className="rounded-md border">
-                  <div className="grid grid-cols-12 p-4 font-medium border-b">
-                    <div className="col-span-4">User</div>
-                    <div className="col-span-3">Email</div>
-                    <div className="col-span-2">Role</div>
-                    <div className="col-span-3">Actions</div>
-                  </div>
-                  {users.length > 0 ? (
-                    users.map((user) => (
-                      <div key={user.id} className="grid grid-cols-12 p-4 border-b last:border-b-0">
-                        <div className="col-span-4 truncate">
-                          {user.full_name || 'No name'}
-                        </div>
-                        <div className="col-span-3 truncate">{user.email}</div>
-                        <div className="col-span-2">
-                          {user.is_admin ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Admin
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                              User
-                            </span>
-                          )}
-                        </div>
-                        <div className="col-span-3">
-                          {!user.is_admin && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleMakeAdmin(user.id)}
-                            >
-                              Make Admin
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-muted-foreground">
-                      No users found
+              <div className="border-t pt-6">
+                <div className="flex gap-4 mb-6">
+                  <div className="flex-1">
+                    <Label htmlFor="email-search">Search by email</Label>
+                    <div className="flex mt-2">
+                      <Input
+                        id="email-search"
+                        placeholder="user@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button onClick={searchUser} className="ml-2">
+                        Search
+                      </Button>
                     </div>
-                  )}
+                  </div>
                 </div>
-              )}
+
+                {isLoading ? (
+                  <div className="flex justify-center my-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ocean-500"></div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <div className="grid grid-cols-12 p-4 font-medium border-b">
+                      <div className="col-span-4">User</div>
+                      <div className="col-span-3">Email</div>
+                      <div className="col-span-2">Role</div>
+                      <div className="col-span-3">Actions</div>
+                    </div>
+                    {users.length > 0 ? (
+                      users.map((user) => (
+                        <div key={user.id} className="grid grid-cols-12 p-4 border-b last:border-b-0">
+                          <div className="col-span-4 truncate">
+                            {user.full_name || 'No name'}
+                          </div>
+                          <div className="col-span-3 truncate">{user.email}</div>
+                          <div className="col-span-2">
+                            {user.is_admin ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Admin
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                User
+                              </span>
+                            )}
+                          </div>
+                          <div className="col-span-3">
+                            {!user.is_admin && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleMakeAdmin(user.id)}
+                              >
+                                Make Admin
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        No users found
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
