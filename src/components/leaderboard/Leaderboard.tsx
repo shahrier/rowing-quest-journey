@@ -33,29 +33,38 @@ export function Leaderboard() {
         if (profileError) throw profileError;
 
         if (profile.team_id) {
-          // Get team members' stats - Fixed query to avoid parser error
-          const { data, error } = await supabase
+          // Get team members' profiles
+          const { data: teamMembers, error: teamError } = await supabase
             .from('profiles')
-            .select(`
-              user_id,
-              full_name,
-              total_distance:activities(sum(distance))`,
-              { count: 'exact' }
-            )
+            .select('user_id, full_name')
             .eq('team_id', profile.team_id);
 
-          if (error) throw error;
+          if (teamError) throw teamError;
           
           // Process the data to match our LeaderboardEntry interface
           const processedData: LeaderboardEntry[] = [];
           
-          // For each profile, we'll need to get strength sessions and badge count separately
-          for (const profile of data || []) {
+          // For each profile, we'll need to get distance, strength sessions and badge count separately
+          for (const member of teamMembers || []) {
+            // Get total rowing distance
+            const { data: distanceData, error: distanceError } = await supabase
+              .from('activities')
+              .select('distance')
+              .eq('user_id', member.user_id)
+              .eq('activity_type', 'rowing');
+              
+            if (distanceError) console.error('Error fetching distance:', distanceError);
+            
+            // Calculate total distance from the returned data
+            const totalDistance = distanceData?.reduce((sum, activity) => {
+              return sum + (activity.distance || 0);
+            }, 0) || 0;
+            
             // Get strength sessions count
             const { count: strengthSessions, error: strengthError } = await supabase
               .from('activities')
               .select('*', { count: 'exact' })
-              .eq('user_id', profile.user_id)
+              .eq('user_id', member.user_id)
               .eq('activity_type', 'strength');
               
             if (strengthError) console.error('Error fetching strength sessions:', strengthError);
@@ -64,14 +73,14 @@ export function Leaderboard() {
             const { count: badgeCount, error: badgeError } = await supabase
               .from('user_badges')
               .select('*', { count: 'exact' })
-              .eq('user_id', profile.user_id);
+              .eq('user_id', member.user_id);
               
             if (badgeError) console.error('Error fetching badges:', badgeError);
             
             processedData.push({
-              user_id: profile.user_id,
-              full_name: profile.full_name || 'Unknown',
-              total_distance: profile.total_distance?.[0]?.sum || 0,
+              user_id: member.user_id,
+              full_name: member.full_name || 'Unknown',
+              total_distance: totalDistance,
               strength_sessions: strengthSessions || 0,
               badge_count: badgeCount || 0
             });
