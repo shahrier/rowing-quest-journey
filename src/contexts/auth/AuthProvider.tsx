@@ -3,7 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { getUserRole, hasRole } from '@/lib/auth-utils';
 import { useToast } from '@/hooks/use-toast';
-import { AppRole, UserProfile } from '@/types/auth';
+import { UserProfile } from './types';
 import { AuthContextType } from './types';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,11 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAdmin(userIsAdmin);
 
       const userProfile: UserProfile = {
-        id: profileData.user_id,
+        user_id: profileData.user_id,
         email: profileData.email,
         full_name: profileData.full_name,
         avatar_url: profileData.avatar_url,
         role: profileData.role,
+        team_id: profileData.team_id,
         created_at: profileData.created_at,
         updated_at: profileData.updated_at
       };
@@ -235,7 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     profile,
     isAdmin,

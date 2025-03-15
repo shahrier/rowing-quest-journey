@@ -33,36 +33,51 @@ export function Leaderboard() {
         if (profileError) throw profileError;
 
         if (profile.team_id) {
-          // Get team members' stats
+          // Get team members' stats - Fixed query to avoid parser error
           const { data, error } = await supabase
             .from('profiles')
             .select(`
-              id,
               user_id,
               full_name,
-              (
-                SELECT COALESCE(SUM(distance), 0)
-                FROM activities
-                WHERE activities.user_id = profiles.user_id
-                AND activity_type = 'rowing'
-              ) as total_distance,
-              (
-                SELECT COUNT(*)
-                FROM activities
-                WHERE activities.user_id = profiles.user_id
-                AND activity_type = 'strength'
-              ) as strength_sessions,
-              (
-                SELECT COUNT(*)
-                FROM user_badges
-                WHERE user_badges.user_id = profiles.user_id
-              ) as badge_count
-            `)
-            .eq('team_id', profile.team_id)
-            .order('total_distance', { ascending: false });
+              total_distance:activities(sum(distance))`,
+              { count: 'exact' }
+            )
+            .eq('team_id', profile.team_id);
 
           if (error) throw error;
-          setLeaderboardData(data);
+          
+          // Process the data to match our LeaderboardEntry interface
+          const processedData: LeaderboardEntry[] = [];
+          
+          // For each profile, we'll need to get strength sessions and badge count separately
+          for (const profile of data || []) {
+            // Get strength sessions count
+            const { count: strengthSessions, error: strengthError } = await supabase
+              .from('activities')
+              .select('*', { count: 'exact' })
+              .eq('user_id', profile.user_id)
+              .eq('activity_type', 'strength');
+              
+            if (strengthError) console.error('Error fetching strength sessions:', strengthError);
+            
+            // Get badges count
+            const { count: badgeCount, error: badgeError } = await supabase
+              .from('user_badges')
+              .select('*', { count: 'exact' })
+              .eq('user_id', profile.user_id);
+              
+            if (badgeError) console.error('Error fetching badges:', badgeError);
+            
+            processedData.push({
+              user_id: profile.user_id,
+              full_name: profile.full_name || 'Unknown',
+              total_distance: profile.total_distance?.[0]?.sum || 0,
+              strength_sessions: strengthSessions || 0,
+              badge_count: badgeCount || 0
+            });
+          }
+          
+          setLeaderboardData(processedData);
         }
       } catch (error) {
         console.error('Error fetching leaderboard data:', error);

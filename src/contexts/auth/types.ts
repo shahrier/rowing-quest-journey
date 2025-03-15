@@ -1,12 +1,16 @@
+
 import { Session, User } from '@supabase/supabase-js';
+import { AppRole } from '@/types/auth';
 
 export type UserProfile = {
   user_id: string;
   email: string;
   full_name: string | null;
   role: string;
-  created_at: string;
-  updated_at: string;
+  avatar_url?: string;
+  team_id?: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type AuthContextType = {
@@ -23,3 +27,6 @@ export type AuthContextType = {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
+
+// Re-export the Supabase types
+export type { User, Session };

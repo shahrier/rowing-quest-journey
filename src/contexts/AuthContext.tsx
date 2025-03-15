@@ -1,10 +1,11 @@
+
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/hooks/use-toast';
 import { getUserRole, hasRole } from '@/lib/auth-utils';
-import { AuthContextType, UserProfile, User, Session } from './auth/types';
-
-export type { UserProfile };
+import { AuthContextType } from './auth/types';
+import { Session, User } from '@supabase/supabase-js';
+import { UserProfile, AppRole } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
