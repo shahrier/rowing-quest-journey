@@ -10,7 +10,7 @@
     <meta property="og:image" content="/og-image.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#1E40AF" />
-    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/placeholder.svg">
   </head>
 
   <body>
@@ -18,18 +18,5 @@
     <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
     <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('Service Worker registered: ', registration);
-            })
-            .catch(registrationError => {
-              console.log('Service Worker registration failed: ', registrationError);
-            });
-        });
-      }
-    </script>
   </body>
 </html>

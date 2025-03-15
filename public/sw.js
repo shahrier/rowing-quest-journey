@@ -1,18 +1,16 @@
 
 // RowQuest PWA Service Worker
 
-const CACHE_NAME = 'rowquest-v1';
+const CACHE_NAME = 'rowquest-v2';
 const OFFLINE_URL = '/offline.html';
 
+// Only include files that actually exist in the project
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
   '/offline.html',
-  '/src/main.tsx',
-  '/src/index.css'
+  '/placeholder.svg'
 ];
 
 // Install event - cache necessary files
@@ -21,9 +19,22 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         console.log('Opened cache');
-        return cache.addAll(urlsToCache);
+        // Use individual promises to avoid failing if a single file fails
+        const cachePromises = urlsToCache.map(url => {
+          // Try to cache each URL individually
+          return cache.add(url).catch(error => {
+            console.error(`Failed to cache ${url}: ${error}`);
+            // Continue despite error for individual files
+            return Promise.resolve();
+          });
+        });
+        
+        return Promise.all(cachePromises);
       })
       .then(() => self.skipWaiting())
+      .catch(error => {
+        console.error('Service worker cache installation failed:', error);
+      })
   );
 });
 
