@@ -7,6 +7,7 @@ import { BadgeManagement } from '@/components/badges/BadgeManagement';
 import { TeamManagement } from '@/components/admin/TeamManagement';
 import { DataExport } from '@/components/admin/DataExport';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { AdminSetup } from '@/components/admin/AdminSetup';
 import { Award, Users, FileSpreadsheet, Settings } from 'lucide-react';
 
 export default function Admin() {
@@ -28,6 +29,9 @@ export default function Admin() {
           Manage users, teams, and global settings
         </p>
       </div>
+
+      {/* Development-only admin setup */}
+      <AdminSetup />
 
       <Tabs defaultValue="users" className="space-y-4">
         <TabsList className="grid grid-cols-2 md:grid-cols-4 gap-2">
