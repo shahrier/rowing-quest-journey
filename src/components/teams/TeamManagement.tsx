@@ -356,82 +356,87 @@ export function TeamManagement() {
                           </>
                         )}
                       </TableCell>
-                    </TableRow>))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
 
-        {/* Invite Member Dialog */}
-        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>
-                Enter the email address of the person you want to invite to your team.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleInviteUser} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="invite-email">Email Address</Label>
-                <div className="flex">
-                  <span className="flex items-center px-3 border border-r-0 rounded-l-md bg-muted">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                  </span>
-                  <Input
-                    id="invite-email"
-                    type="email"
-                    className="rounded-l-none"
-                    placeholder="Enter email address"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    required
-                  />
-                </div>
+      {/* Invite Member Dialog */}
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Enter the email address of the person you want to invite to your team.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleInviteUser} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="invite-email">Email Address</Label>
+              <div className="flex">
+                <span className="flex items-center px-3 border border-r-0 rounded-l-md bg-muted">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                </span>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  className="rounded-l-none"
+                  placeholder="Enter email address"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  required
+                />
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Sending...' : 'Send Invitation'}
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Change Role Dialog */}
-        <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Change Member Role</DialogTitle>
-              <DialogDescription>
-                {memberToPromote && `Select a new role for ${memberToPromote.full_name}`}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Select defaultValue={memberToPromote?.role} onValueChange={(value) => confirmPromoteMember(value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="team_manager">Team Manager</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
-                  Cancel
-                </Button>
-              </DialogFooter>
             </div>
-          </DialogContent>
-        </Dialog>
-      </Card>
-    );
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Sending...' : 'Send Invitation'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Member Role</DialogTitle>
+            <DialogDescription>
+              {memberToPromote && `Select a new role for ${memberToPromote.full_name}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select 
+                defaultValue={memberToPromote?.role} 
+                onValueChange={(value) => confirmPromoteMember(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="team_manager">Team Manager</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
+                Cancel
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
 }
