@@ -82,7 +82,7 @@ export function JourneyMap({ checkpoints, currentDistance, totalDistance }: Jour
     
     for (let i = 0; i < points.length - 1; i++) {
       const xc = (points[i].x + points[i + 1].x) / 2;
-      constyc = (points[i].y + points[i + 1].y) / 2;
+      const yc = (points[i].y + points[i + 1].y) / 2;
       
       if (points[i + 1].x <= progressX) {
         // Draw full segment
