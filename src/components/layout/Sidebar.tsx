@@ -1,76 +1,169 @@
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { 
+  Home, 
+  Map, 
+  BarChart2, 
+  Dumbbell, 
+  Users, 
+  Award, 
+  Settings, 
+  X 
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import {
-  Award,
-  BarChart2,
-  Dumbbell,
-  Home,
-  LogOut,
-  Map,
-  Settings,
-  Shield,
-  User,
-  Users,
-} from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+interface SidebarProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+}
 
-export function Sidebar() {
-  const { signOut, isAdmin } = useAuth();
-  
-  const menuItems = [
-    { icon: Home, label: "Home", href: "/" },
-    { icon: Map, label: "Journey Map", href: "/journey" },
-    { icon: BarChart2, label: "Stats", href: "/stats" },
-    { icon: Dumbbell, label: "Training", href: "/training" },
-    { icon: Users, label: "Team", href: "/team" },
-    { icon: Award, label: "Achievements", href: "/achievements" },
-    { icon: User, label: "Profile", href: "/profile" },
-    { icon: Settings, label: "Settings", href: "/settings" },
+export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
+  const location = useLocation();
+  const { isAdmin, isTeamManager } = useAuth();
+
+  const routes = [
+    {
+      title: 'Dashboard',
+      href: '/',
+      icon: Home,
+    },
+    {
+      title: 'Journey Map',
+      href: '/journey',
+      icon: Map,
+    },
+    {
+      title: 'Statistics',
+      href: '/stats',
+      icon: BarChart2,
+    },
+    {
+      title: 'Training',
+      href: '/training',
+      icon: Dumbbell,
+    },
+    {
+      title: 'Team',
+      href: '/team',
+      icon: Users,
+    },
+    {
+      title: 'Achievements',
+      href: '/achievements',
+      icon: Award,
+    },
+    {
+      title: 'Settings',
+      href: '/settings',
+      icon: Settings,
+    },
   ];
 
-  // Add admin dashboard link for admin users
+  // Add admin route if user is admin
   if (isAdmin) {
-    menuItems.push({ icon: Shield, label: "Admin", href: "/admin" });
+    routes.push({
+      title: 'Admin',
+      href: '/admin',
+      icon: Settings,
+    });
   }
 
-  return (
-    <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground pt-5 pb-10 w-64">
-      <div className="flex items-center gap-2 px-6 py-3">
-        <div className="relative">
-          <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-ocean-500 to-energy-500 blur opacity-70 group-hover:opacity-100 transition"></div>
-          <div className="relative flex items-center justify-center h-8 w-8 rounded-full bg-ocean-700 text-white font-bold">
-            R
-          </div>
+  const isActive = (path: string) => {
+    if (path === '/' && location.pathname === '/') {
+      return true;
+    }
+    return location.pathname.startsWith(path) && path !== '/';
+  };
+
+  // Mobile sidebar (Sheet component)
+  const mobileSidebar = (
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetContent side="left" className="p-0">
+        <div className="flex h-16 items-center border-b px-4">
+          <Link to="/" className="flex items-center gap-2" onClick={() => setIsOpen(false)}>
+            <div className="relative w-8 h-8">
+              <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 blur opacity-70"></div>
+              <div className="relative flex items-center justify-center h-8 w-8 rounded-full bg-blue-700 text-white text-sm font-bold">
+                R
+              </div>
+            </div>
+            <span className="font-bold text-lg">RowQuest</span>
+          </Link>
+          <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setIsOpen(false)}>
+            <X className="h-5 w-5" />
+          </Button>
         </div>
-        <span className="text-lg font-semibold">RowQuest</span>
-      </div>
+        <ScrollArea className="h-[calc(100vh-4rem)] pb-10">
+          <div className="px-2 py-4">
+            <nav className="flex flex-col gap-1">
+              {routes.map((route) => (
+                <Link
+                  key={route.href}
+                  to={route.href}
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    isActive(route.href)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'hover:bg-muted'
+                  )}
+                >
+                  <route.icon className="h-5 w-5" />
+                  {route.title}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  );
 
-      <div className="mt-10 px-3 flex-1">
-        <nav className="space-y-1">
-          {menuItems.map((item) => (
-            <Link
-              key={item.label}
-              to={item.href}
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent/10 transition-colors"
-            >
-              <item.icon className="h-5 w-5" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
+  // Desktop sidebar
+  const desktopSidebar = (
+    <div className="hidden border-r bg-background md:block">
+      <div className="flex h-16 items-center border-b px-4">
+        <Link to="/" className="flex items-center gap-2">
+          <div className="relative w-8 h-8">
+            <div className="absolute -inset-0.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 blur opacity-70"></div>
+            <div className="relative flex items-center justify-center h-8 w-8 rounded-full bg-blue-700 text-white text-sm font-bold">
+              R
+            </div>
+          </div>
+          <span className="font-bold text-lg">RowQuest</span>
+        </Link>
       </div>
-
-      <div className="mt-auto px-3">
-        <Button
-          variant="ghost"
-          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/10"
-          onClick={signOut}
-        >
-          <LogOut className="mr-2 h-5 w-5" />
-          Logout
-        </Button>
-      </div>
+      <ScrollArea className="h-[calc(100vh-4rem)] pb-10">
+        <div className="px-2 py-4">
+          <nav className="flex flex-col gap-1">
+            {routes.map((route) => (
+              <Link
+                key={route.href}
+                to={route.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive(route.href)
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-muted'
+                )}
+              >
+                <route.icon className="h-5 w-5" />
+                {route.title}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      </ScrollArea>
     </div>
+  );
+
+  return (
+    <>
+      {mobileSidebar}
+      {desktopSidebar}
+    </>
   );
 }

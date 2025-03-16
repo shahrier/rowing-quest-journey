@@ -1,228 +1,253 @@
-
 import { useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileSpreadsheet, Download } from 'lucide-react';
-import { format } from 'date-fns';
-
-type ExportType = 'activities' | 'badges' | 'media' | 'all';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { FileDown, FileSpreadsheet, FilePdf } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 export function DataExport() {
-  const { user } = useAuth();
+  const { isAdmin, teamId } = useAuth();
   const { toast } = useToast();
+  const [dataType, setDataType] = useState('activities');
+  const [fileFormat, setFileFormat] = useState('csv');
   const [isLoading, setIsLoading] = useState(false);
-  const [exportType, setExportType] = useState<ExportType>('all');
+  const [includeAllTeams, setIncludeAllTeams] = useState(false);
+  const [dateRange, setDateRange] = useState('all');
 
   const handleExport = async () => {
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-
-      // Get user's role and team
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('team_id, role')
-        .eq('user_id', user?.id)
-        .single();
-
-      if (profileError) throw profileError;
-
-      if (profile.role !== 'team_manager' && profile.role !== 'admin') {
+      let query = supabase.from(dataType);
+      
+      // Apply team filter if not including all teams
+      if (!includeAllTeams && teamId && !isAdmin) {
+        // For team-specific data
+        if (dataType === 'activities' || dataType === 'media') {
+          // For activities, we need to join with profiles to get team_id
+          const { data: teamMembers } = await supabase
+            .from('profiles')
+            .select('user_id')
+            .eq('team_id', teamId);
+            
+          if (teamMembers && teamMembers.length > 0) {
+            const userIds = teamMembers.map(member => member.user_id);
+            query = query.in('user_id', userIds);
+          }
+        } else if (dataType === 'badges') {
+          // For badges, filter by team_id directly
+          query = query.eq('team_id', teamId);
+        }
+      }
+      
+      // Apply date range filter
+      if (dateRange !== 'all' && (dataType === 'activities' || dataType === 'media')) {
+        const now = new Date();
+        let startDate;
+        
+        switch (dateRange) {
+          case 'week':
+            startDate = new Date(now.setDate(now.getDate() - 7));
+            break;
+          case 'month':
+            startDate = new Date(now.setMonth(now.getMonth() - 1));
+            break;
+          case 'year':
+            startDate = new Date(now.setFullYear(now.getFullYear() - 1));
+            break;
+        }
+        
+        query = query.gte('created_at', startDate.toISOString());
+      }
+      
+      // Get the data
+      const { data, error } = await query.select();
+      
+      if (error) throw error;
+      
+      if (!data || data.length === 0) {
         toast({
-          title: 'Error',
-          description: 'Only team managers and admins can export data',
+          title: 'No data to export',
+          description: 'There is no data matching your criteria',
           variant: 'destructive',
         });
+        setIsLoading(false);
         return;
       }
-
-      // Prepare query conditions based on role
-      const teamCondition = profile.role === 'admin' ? {} : { team_id: profile.team_id };
-
-      // Fetch data based on export type
-      let data: any[] = [];
-      let filename = '';
-
-      if (exportType === 'activities' || exportType === 'all') {
-        const { data: activities } = await supabase
-          .from('activities')
-          .select(`
-            *,
-            profiles:user_id (
-              full_name,
-              email
-            )
-          `)
-          .match(teamCondition);
-        
-        if (activities) {
-          data.push({
-            name: 'Activities',
-            headers: ['User', 'Email', 'Type', 'Distance (m)', 'Duration (s)', 'Notes', 'Date'],
-            rows: activities.map(a => [
-              a.profiles.full_name,
-              a.profiles.email,
-              a.activity_type,
-              a.distance || '',
-              a.duration,
-              a.notes || '',
-              format(new Date(a.created_at), 'yyyy-MM-dd HH:mm:ss')
-            ])
-          });
-        }
+      
+      // Convert data to the selected format
+      let fileContent;
+      let fileName;
+      let fileType;
+      
+      switch (fileFormat) {
+        case 'csv':
+          fileContent = convertToCSV(data);
+          fileName = `${dataType}_export_${new Date().toISOString()}.csv`;
+          fileType = 'text/csv';
+          break;
+        case 'json':
+          fileContent = JSON.stringify(data, null, 2);
+          fileName = `${dataType}_export_${new Date().toISOString()}.json`;
+          fileType = 'application/json';
+          break;
+        case 'excel':
+          // For Excel, we'll use CSV as a simple approach
+          // In a real app, you might use a library like xlsx
+          fileContent = convertToCSV(data);
+          fileName = `${dataType}_export_${new Date().toISOString()}.csv`;
+          fileType = 'text/csv';
+          break;
       }
-
-      if (exportType === 'badges' || exportType === 'all') {
-        const { data: badges } = await supabase
-          .from('user_badges')
-          .select(`
-            *,
-            badges (
-              name,
-              description,
-              tier,
-              requirement_type,
-              requirement_value
-            ),
-            profiles:user_id (
-              full_name,
-              email
-            )
-          `)
-          .match(teamCondition);
-
-        if (badges) {
-          data.push({
-            name: 'Badges',
-            headers: ['User', 'Email', 'Badge', 'Description', 'Tier', 'Earned At'],
-            rows: badges.map(b => [
-              b.profiles.full_name,
-              b.profiles.email,
-              b.badges.name,
-              b.badges.description,
-              b.badges.tier,
-              format(new Date(b.earned_at), 'yyyy-MM-dd HH:mm:ss')
-            ])
-          });
-        }
-      }
-
-      if (exportType === 'media' || exportType === 'all') {
-        const { data: media } = await supabase
-          .from('media')
-          .select(`
-            *,
-            profiles:user_id (
-              full_name,
-              email
-            )
-          `)
-          .match(teamCondition);
-
-        if (media) {
-          data.push({
-            name: 'Media',
-            headers: ['User', 'Email', 'Type', 'URL', 'Caption', 'Uploaded At'],
-            rows: media.map(m => [
-              m.profiles.full_name,
-              m.profiles.email,
-              m.media_type,
-              m.url,
-              m.caption || '',
-              format(new Date(m.created_at), 'yyyy-MM-dd HH:mm:ss')
-            ])
-          });
-        }
-      }
-
-      // Generate Excel-compatible CSV content
-      let csvContent = '';
-      data.forEach(sheet => {
-        csvContent += `${sheet.name}\n`;
-        csvContent += sheet.headers.join(',') + '\n';
-        sheet.rows.forEach((row: any[]) => {
-          csvContent += row.map(cell => {
-            // Escape cells containing commas or quotes
-            if (cell.toString().includes(',') || cell.toString().includes('"')) {
-              return `"${cell.toString().replace(/"/g, '""')}"`;
-            }
-            return cell;
-          }).join(',') + '\n';
-        });
-        csvContent += '\n';
-      });
-
-      // Create and download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create a download link
+      const blob = new Blob([fileContent], { type: fileType });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
-      const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm');
-      filename = `rowquest_export_${exportType}_${timestamp}.csv`;
-      
-      link.setAttribute('href', url);
-      link.setAttribute('download', filename);
-      link.style.visibility = 'hidden';
+      link.href = url;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
+      
       toast({
-        title: 'Success',
-        description: 'Data exported successfully',
+        title: 'Export successful',
+        description: `${dataType} data has been exported as ${fileFormat.toUpperCase()}`,
       });
     } catch (error) {
       console.error('Error exporting data:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to export data',
+        title: 'Export failed',
+        description: 'There was an error exporting the data',
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
+  
+  // Helper function to convert data to CSV
+  const convertToCSV = (data: any[]) => {
+    if (!data || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const headerRow = headers.join(',');
+    
+    const rows = data.map(item => {
+      return headers.map(header => {
+        const value = item[header];
+        // Handle different data types
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'object') return JSON.stringify(value);
+        return value;
+      }).join(',');
+    });
+    
+    return [headerRow, ...rows].join('\\n');
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Export Data</CardTitle>
+        <CardTitle>Data Export</CardTitle>
+        <CardDescription>
+          Export data for analysis or backup purposes
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Select value={exportType} onValueChange={(value) => setExportType(value as ExportType)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select data to export" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Data</SelectItem>
-              <SelectItem value="activities">Activities Only</SelectItem>
-              <SelectItem value="badges">Badges Only</SelectItem>
-              <SelectItem value="media">Media Only</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <Button 
-          onClick={handleExport} 
-          disabled={isLoading}
-          className="w-full"
-        >
-          {isLoading ? (
-            'Exporting...'
-          ) : (
-            <>
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
-              Export to CSV
-            </>
+      <CardContent>
+        <div className="grid gap-6">
+          <div className="grid gap-3">
+            <Label>Data Type</Label>
+            <Select value={dataType} onValueChange={setDataType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select data type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="activities">Rowing & Strength Activities</SelectItem>
+                <SelectItem value="badges">Badges & Achievements</SelectItem>
+                <SelectItem value="media">Photos & Videos</SelectItem>
+                {isAdmin && <SelectItem value="profiles">User Profiles</SelectItem>}
+                {isAdmin && <SelectItem value="teams">Teams</SelectItem>}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-3">
+            <Label>File Format</Label>
+            <Select value={fileFormat} onValueChange={setFileFormat}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select file format" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
+                <SelectItem value="excel">Excel</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-3">
+            <Label>Date Range</Label>
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select date range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="week">Last 7 Days</SelectItem>
+                <SelectItem value="month">Last 30 Days</SelectItem>
+                <SelectItem value="year">Last Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {isAdmin && (
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="all-teams" 
+                checked={includeAllTeams} 
+                onCheckedChange={(checked) => setIncludeAllTeams(checked as boolean)} 
+              />
+              <Label htmlFor="all-teams">Include data from all teams</Label>
+            </div>
           )}
-        </Button>
-
-        <p className="text-sm text-gray-600">
-          Note: Team managers can only export their team's data, while admins can export data for all teams.
-        </p>
+          
+          <Button 
+            onClick={handleExport} 
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? (
+              'Exporting...'
+            ) : (
+              <>
+                <FileDown className="mr-2 h-4 w-4" />
+                Export {dataType === 'activities' ? 'Activities' : 
+                        dataType === 'badges' ? 'Badges' : 
+                        dataType === 'media' ? 'Media' : 
+                        dataType === 'profiles' ? 'Profiles' : 'Teams'}
+              </>
+            )}
+          </Button>
+          
+          <div className="text-sm text-muted-foreground">
+            <p>Available export formats:</p>
+            <div className="flex items-center mt-2 space-x-4">
+              <div className="flex items-center">
+                <FileSpreadsheet className="h-4 w-4 mr-1" />
+                <span>CSV/Excel</span>
+              </div>
+              <div className="flex items-center">
+                <FilePdf className="h-4 w-4 mr-1" />
+                <span>JSON</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

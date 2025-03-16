@@ -1,146 +1,355 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Ship, Dumbbell, Award } from 'lucide-react';
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { currentUser } from "@/data/mockData";
-import { useToast } from "@/components/ui/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const ProfilePage = () => {
+export default function ProfilePage() {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const [user, setUser] = useState({
-    name: currentUser.name,
-    email: currentUser.email,
-    bio: "Rowing enthusiast and team player. Love the open water and challenging myself."
-  });
-  
-  const initials = user.name
-    .split(' ')
-    .map(name => name[0])
-    .join('')
-    .toUpperCase();
-    
-  const handleSaveProfile = () => {
-    // In a real app, this would save to a backend
-    toast({
-      title: "Profile updated",
-      description: "Your profile has been updated successfully."
-    });
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [totalDistance, setTotalDistance] = useState(0);
+  const [strengthSessions, setStrengthSessions] = useState(0);
+  const [badgeCount, setBadgeCount] = useState(0);
+
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchStats();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, email, avatar_url')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error) throw error;
+      
+      setFullName(data.full_name || '');
+      setEmail(data.email || '');
+      setAvatarUrl(data.avatar_url);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load profile',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
+
+  const fetchStats = async () => {
+    try {
+      // Get total rowing distance
+      const { data: distanceData, error: distanceError } = await supabase
+        .from('activities')
+        .select('distance')
+        .eq('user_id', user?.id)
+        .eq('activity_type', 'rowing');
+        
+      if (distanceError) throw distanceError;
+      
+      const totalDist = distanceData?.reduce((sum, activity) => {
+        return sum + (activity.distance || 0);
+      }, 0) || 0;
+      
+      setTotalDistance(totalDist);
+      
+      // Get strength sessions count
+      const { count: strengthCount, error: strengthError } = await supabase
+        .from('activities')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id)
+        .eq('activity_type', 'strength');
+        
+      if (strengthError) throw strengthError;
+      
+      setStrengthSessions(strengthCount || 0);
+      
+      // Get badge count
+      const { count: badgesCount, error: badgesError } = await supabase
+        .from('user_badges')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+        
+      if (badgesError) throw badgesError;
+      
+      setBadgeCount(badgesCount || 0);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!fullName) {
+      toast({
+        title: 'Missing information',
+        description: 'Please enter your full name',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: fullName,
+        })
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+      
+      toast({
+        title: 'Profile updated',
+        description: 'Your profile has been updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please upload an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // Check file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please upload an image smaller than 2MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    try {
+      setIsSubmitting(true);
+      
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `avatar-${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+        
+      if (uploadError) throw uploadError;
+      
+      // Get the public URL
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+        
+      if (!urlData.publicUrl) throw new Error('Failed to get public URL');
+      
+      // Update profile
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          avatar_url: urlData.publicUrl,
+        })
+        .eq('user_id', user.id);
+        
+      if (updateError) throw updateError;
+      
+      setAvatarUrl(urlData.publicUrl);
+      
+      toast({
+        title: 'Avatar updated',
+        description: 'Your profile picture has been updated',
+      });
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile picture',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading profile...</div>;
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">My Profile</h1>
         <p className="text-muted-foreground">
-          Manage your account information and preferences
+          View and update your personal information
         </p>
       </div>
       
-      <Tabs defaultValue="profile">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="stats">My Stats</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <div className="flex gap-4 items-center">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={currentUser.avatar} alt={user.name} />
-                  <AvatarFallback className="bg-ocean-100 text-ocean-800 text-xl">{initials}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle>{user.name}</CardTitle>
-                  <CardDescription>Member since {currentUser.joinedAt.toLocaleDateString()}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Information</CardTitle>
+            <CardDescription>
+              Update your personal details
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleUpdateProfile} className="space-y-6">
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input 
-                      id="name"
-                      value={user.name}
-                      onChange={(e) => setUser({...user, name: e.target.value})}
-                    />
+                <div className="flex flex-col items-center gap-4 sm:flex-row">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={avatarUrl || undefined} alt={fullName} />
+                      <AvatarFallback className="text-2xl">
+                        {fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <label 
+                      htmlFor="avatar-upload" 
+                      className="absolute -bottom-2 -right-2 rounded-full bg-primary p-1.5 text-primary-foreground cursor-pointer"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                      </svg>
+                      <span className="sr-only">Change avatar</span>
+                      <input 
+                        id="avatar-upload" 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        onChange={handleAvatarChange}
+                        disabled={isSubmitting}
+                      />
+                    </label>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input 
-                      id="email" 
-                      type="email"
-                      value={user.email}
-                      onChange={(e) => setUser({...user, email: e.target.value})}
-                    />
+                  <div className="space-y-1 text-center sm:text-left">
+                    <h3 className="font-medium text-lg">{fullName}</h3>
+                    <p className="text-sm text-muted-foreground">{email}</p>
                   </div>
                 </div>
+                
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <textarea 
-                    id="bio"
-                    className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={user.bio}
-                    onChange={(e) => setUser({...user, bio: e.target.value})}
+                  <Label htmlFor="full-name">Full Name</Label>
+                  <Input
+                    id="full-name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    value={email}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Email cannot be changed
+                  </p>
+                </div>
               </div>
-            </CardContent>
-            <CardFooter className="flex justify-between">
-              <Button variant="outline">Cancel</Button>
-              <Button onClick={handleSaveProfile}>Save Changes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
+              
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
         
-        <TabsContent value="stats">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Rowing Statistics</CardTitle>
-              <CardDescription>Your personal performance metrics</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard 
-                  title="Total Distance" 
-                  value={`${(currentUser.rowingDistanceM / 1000).toFixed(1)} km`} 
-                  subtitle="Distance rowed to date"
-                  color="bg-blue-100 text-blue-800"
-                />
-                <StatCard 
-                  title="Strength Sessions" 
-                  value={currentUser.strengthSessions.toString()}
-                  subtitle="Total completed"
-                  color="bg-purple-100 text-purple-800"
-                />
-                <StatCard 
-                  title="Achievements" 
-                  value={currentUser.achievements.length.toString()}
-                  subtitle="Unlocked badges"
-                  color="bg-amber-100 text-amber-800"
-                />
+        <Card>
+          <CardHeader>
+            <CardTitle>Activity Summary</CardTitle>
+            <CardDescription>
+              Your rowing and training statistics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full">
+                  <Ship className="h-6 w-6 text-blue-700 dark:text-blue-300" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Total Distance Rowed</p>
+                  <h3 className="text-2xl font-bold">{totalDistance.toLocaleString()} m</h3>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              
+              <div className="flex items-center gap-4">
+                <div className="bg-green-100 dark:bg-green-900 p-3 rounded-full">
+                  <Dumbbell className="h-6 w-6 text-green-700 dark:text-green-300" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Strength Training Sessions</p>
+                  <h3 className="text-2xl font-bold">{strengthSessions}</h3>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="bg-amber-100 dark:bg-amber-900 p-3 rounded-full">
+                  <Award className="h-6 w-6 text-amber-700 dark:text-amber-300" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Badges Earned</p>
+                  <h3 className="text-2xl font-bold">{badgeCount}</h3>
+                </div>
+              </div>
+              
+              <div className="pt-4">
+                <Button variant="outline" className="w-full" asChild>
+                  <a href="/achievements">View All Achievements</a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
-};
-
-const StatCard = ({ title, value, subtitle, color }: { title: string, value: string, subtitle: string, color: string }) => (
-  <div className="border rounded-lg p-4 shadow-sm">
-    <div className="text-sm font-medium text-gray-500">{title}</div>
-    <div className="mt-2 text-3xl font-semibold">{value}</div>
-    <div className="mt-1 text-xs text-gray-500">{subtitle}</div>
-    <div className={`mt-2 h-1 w-16 rounded ${color}`}></div>
-  </div>
-);
-
-export default ProfilePage;
+}

@@ -1,50 +1,45 @@
-
 import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Refresh } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export function UpdateNotification() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Check if the app is running as a PWA
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+
     if ('serviceWorker' in navigator) {
       // Listen for service worker updates
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
-        refreshing = true;
-        window.location.reload();
-      });
-
-      // Detect if there's a new service worker
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          
-          if (newWorker) {
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                setUpdateAvailable(true);
-                
-                toast('App update available', {
-                  description: 'Refresh the page to get the latest version',
-                  action: {
-                    label: 'Update now',
-                    onClick: () => window.location.reload(),
-                  },
-                  duration: 0, // Keep it until user acts
-                });
-              }
-            });
-          }
-        });
+      window.addEventListener('sw-update-available', () => {
+        setUpdateAvailable(true);
         
-        // Check for updates every 1 hour
-        setInterval(() => {
-          registration.update().catch(console.error);
-        }, 60 * 60 * 1000);
+        toast({
+          title: 'Update Available',
+          description: 'A new version of RowQuest is available. Click to update.',
+          action: (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleUpdate}
+              className="flex items-center gap-1"
+            >
+              <Refresh className="h-4 w-4" />
+              Update
+            </Button>
+          ),
+          duration: 10000, // 10 seconds
+        });
       });
     }
   }, []);
 
-  return null;
+  const handleUpdate = () => {
+    // Reload the page to get the new version
+    window.location.reload();
+  };
+
+  return null; // This component doesn't render anything directly
 }

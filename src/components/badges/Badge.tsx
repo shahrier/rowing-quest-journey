@@ -1,51 +1,76 @@
-
-import { Badge as UIBadge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import { BadgeTier } from "@/lib/supabase-types";
-import { Award, Star } from "lucide-react";
+import { BadgeTier } from '@/lib/supabase-types';
+import { Award } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface BadgeProps {
   name: string;
-  description?: string;
+  description: string;
   tier: BadgeTier;
-  earned?: boolean;
-  className?: string;
+  earned: boolean;
+  earnedAt?: string;
 }
 
-export function Badge({ name, description, tier, earned = false, className }: BadgeProps) {
-  // Define colors based on the badge tier
+export function Badge({ name, description, tier, earned, earnedAt }: BadgeProps) {
   const tierColors = {
-    bronze: "bg-amber-700 hover:bg-amber-800 text-white",
-    silver: "bg-gray-400 hover:bg-gray-500 text-white",
-    gold: "bg-yellow-500 hover:bg-yellow-600 text-white",
+    bronze: {
+      bg: 'bg-amber-100 dark:bg-amber-950',
+      border: 'border-amber-300 dark:border-amber-800',
+      text: 'text-amber-800 dark:text-amber-300',
+      icon: 'text-amber-600 dark:text-amber-400',
+    },
+    silver: {
+      bg: 'bg-slate-100 dark:bg-slate-900',
+      border: 'border-slate-300 dark:border-slate-700',
+      text: 'text-slate-800 dark:text-slate-300',
+      icon: 'text-slate-500 dark:text-slate-400',
+    },
+    gold: {
+      bg: 'bg-yellow-100 dark:bg-yellow-950',
+      border: 'border-yellow-300 dark:border-yellow-800',
+      text: 'text-yellow-800 dark:text-yellow-300',
+      icon: 'text-yellow-600 dark:text-yellow-400',
+    },
   };
 
-  // Define tier icons
-  const tierIcons = {
-    bronze: <Award className="h-3.5 w-3.5 mr-1" />,
-    silver: <Award className="h-3.5 w-3.5 mr-1" />,
-    gold: <Star className="h-3.5 w-3.5 mr-1" />,
-  };
+  const colors = tierColors[tier];
 
   return (
-    <div className={cn("flex flex-col items-center", className)}>
-      <UIBadge 
-        className={cn(
-          "text-xs px-3 py-1", 
-          tierColors[tier],
-          !earned && "opacity-60",
-          className
-        )}
-      >
-        {tierIcons[tier]}
-        {name}
-        {!earned && " (Locked)"}
-      </UIBadge>
+    <div 
+      className={cn(
+        'relative rounded-lg border p-4 flex flex-col items-center text-center transition-all',
+        colors.bg,
+        colors.border,
+        earned ? 'opacity-100' : 'opacity-60 grayscale',
+      )}
+    >
+      <div className={cn('absolute -top-3 -right-3 rounded-full p-1.5', colors.bg, colors.border)}>
+        <Award className={cn('h-5 w-5', colors.icon)} />
+      </div>
       
-      {description && (
-        <span className="text-xs text-muted-foreground mt-1 text-center">
-          {description}
+      <div className="mt-2 mb-1">
+        <span className={cn(
+          'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+          colors.bg,
+          colors.text
+        )}>
+          {tier.charAt(0).toUpperCase() + tier.slice(1)}
         </span>
+      </div>
+      
+      <h3 className="font-semibold mt-2">{name}</h3>
+      
+      <p className="text-xs text-muted-foreground mt-1 flex-grow">
+        {description}
+      </p>
+      
+      {earned ? (
+        <div className="mt-3 text-xs text-muted-foreground">
+          {earnedAt ? `Earned on ${new Date(earnedAt).toLocaleDateString()}` : 'Earned'}
+        </div>
+      ) : (
+        <div className="mt-3 text-xs text-muted-foreground">
+          Not yet earned
+        </div>
       )}
     </div>
   );

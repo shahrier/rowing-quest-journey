@@ -1,75 +1,180 @@
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { TeamManagement } from '@/components/teams/TeamManagement';
+import { Leaderboard } from '@/components/leaderboard/Leaderboard';
+import { MediaUpload } from '@/components/media/MediaUpload';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, Trophy, Image } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockUsers } from "@/data/mockData";
-import { Separator } from "@/components/ui/separator";
-import { User } from "@/data/types";
+export default function TeamPage() {
+  const { user, teamId, isAdmin, isTeamManager } = useAuth();
+  const { toast } = useToast();
+  const [hasTeam, setHasTeam] = useState<boolean | null>(null);
+  const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<string>('');
+  const [isJoining, setIsJoining] = useState(false);
 
-const TeamPage = () => {
-  // Sort users by rowing distance descending
-  const sortedUsers = [...mockUsers].sort((a, b) => b.rowingDistanceM - a.rowingDistanceM);
-  
+  useEffect(() => {
+    setHasTeam(!!teamId);
+    if (!teamId) {
+      fetchAvailableTeams();
+    }
+  }, [teamId]);
+
+  const fetchAvailableTeams = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('id, name');
+
+      if (error) throw error;
+      setAvailableTeams(data || []);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
+
+  const handleJoinTeam = async () => {
+    if (!selectedTeam) {
+      toast({
+        title: 'No team selected',
+        description: 'Please select a team to join',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsJoining(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ team_id: selectedTeam })
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Team joined',
+        description: 'You have successfully joined the team',
+      });
+
+      // Refresh page to update team status
+      window.location.reload();
+    } catch (error) {
+      console.error('Error joining team:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to join team',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
+  if (hasTeam === false) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Join a Team</h1>
+          <p className="text-muted-foreground">
+            Join an existing team to start tracking your rowing journey
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Available Teams</CardTitle>
+            <CardDescription>
+              Select a team to join and start contributing to their journey
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {availableTeams.length === 0 ? (
+                <p>No teams available to join. Please check back later.</p>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label htmlFor="team-select" className="text-sm font-medium">
+                      Select Team
+                    </label>
+                    <select
+                      id="team-select"
+                      value={selectedTeam}
+                      onChange={(e) => setSelectedTeam(e.target.value)}
+                      className="w-full p-2 border rounded-md"
+                    >
+                      <option value="">Select a team...</option>
+                      {availableTeams.map((team) => (
+                        <option key={team.id} value={team.id}>
+                          {team.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <Button
+                    onClick={handleJoinTeam}
+                    disabled={!selectedTeam || isJoining}
+                    className="w-full"
+                  >
+                    {isJoining ? 'Joining...' : 'Join Team'}
+                  </Button>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Team Members</h1>
+        <h1 className="text-3xl font-bold mb-2">Team</h1>
         <p className="text-muted-foreground">
-          Meet the rowers participating in the journey
+          Manage your team, view leaderboards, and share media
         </p>
       </div>
       
-      <Card>
-        <CardHeader>
-          <CardTitle>Team Directory</CardTitle>
-          <CardDescription>View all team members and their contributions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedUsers.map((user) => (
-              <UserCard key={user.id} user={user} />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="leaderboard" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="leaderboard">
+            <Trophy className="h-4 w-4 mr-2" />
+            Leaderboard
+          </TabsTrigger>
+          <TabsTrigger value="media">
+            <Image className="h-4 w-4 mr-2" />
+            Team Media
+          </TabsTrigger>
+          {(isTeamManager || isAdmin) && (
+            <TabsTrigger value="management">
+              <Users className="h-4 w-4 mr-2" />
+              Team Management
+            </TabsTrigger>
+          )}
+        </TabsList>
+        
+        <TabsContent value="leaderboard">
+          <Leaderboard />
+        </TabsContent>
+        
+        <TabsContent value="media">
+          <MediaUpload />
+        </TabsContent>
+        
+        {(isTeamManager || isAdmin) && (
+          <TabsContent value="management">
+            <TeamManagement />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
-};
-
-const UserCard = ({ user }: { user: User }) => {
-  const initials = user.name
-    .split(' ')
-    .map(name => name[0])
-    .join('')
-    .toUpperCase();
-
-  return (
-    <div className="flex space-x-4 items-start p-4 rounded-lg border shadow-sm">
-      <Avatar className="h-12 w-12">
-        <AvatarImage src={user.avatar} alt={user.name} />
-        <AvatarFallback className="bg-ocean-100 text-ocean-800">{initials}</AvatarFallback>
-      </Avatar>
-      <div className="flex flex-col">
-        <h3 className="font-medium">{user.name}</h3>
-        <p className="text-sm text-muted-foreground mb-2">Joined {user.joinedAt.toLocaleDateString()}</p>
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span>Distance:</span>
-            <span className="font-medium">{(user.rowingDistanceM / 1000).toFixed(1)} km</span>
-          </div>
-          <Separator />
-          <div className="flex justify-between">
-            <span>Strength:</span>
-            <span className="font-medium">{user.strengthSessions} sessions</span>
-          </div>
-          <Separator />
-          <div className="flex justify-between">
-            <span>Achievements:</span>
-            <span className="font-medium">{user.achievements.length}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default TeamPage;
+}
