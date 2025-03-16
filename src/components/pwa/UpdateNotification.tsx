@@ -34,7 +34,7 @@ export function UpdateNotification() {
         });
       });
     }
-  }, []);
+  }, [toast]); // Add toast to the dependency array
 
   const handleUpdate = () => {
     // Reload the page to get the new version
