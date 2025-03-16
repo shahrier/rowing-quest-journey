@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Refresh } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 export function UpdateNotification() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const { toast } = useToast();
-
   useEffect(() => {
     // Check if the app is running as a PWA
     const isPWA = window.matchMedia('(display-mode: standalone)').matches;
@@ -14,8 +11,7 @@ export function UpdateNotification() {
     if ('serviceWorker' in navigator) {
       // Listen for service worker updates
       window.addEventListener('sw-update-available', () => {
-        setUpdateAvailable(true);
-        
+        // Show toast notification
         toast({
           title: 'Update Available',
           description: 'A new version of RowQuest is available. Click to update.',
@@ -23,7 +19,7 @@ export function UpdateNotification() {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={handleUpdate}
+              onClick={() => window.location.reload()}
               className="flex items-center gap-1"
             >
               <Refresh className="h-4 w-4" />
@@ -34,12 +30,7 @@ export function UpdateNotification() {
         });
       });
     }
-  }, [toast]); // Add toast to the dependency array
-
-  const handleUpdate = () => {
-    // Reload the page to get the new version
-    window.location.reload();
-  };
+  }, []);
 
   return null; // This component doesn't render anything directly
 }
