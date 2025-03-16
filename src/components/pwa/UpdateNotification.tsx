@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Refresh } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 export function UpdateNotification() {
@@ -22,7 +22,7 @@ export function UpdateNotification() {
               onClick={() => window.location.reload()}
               className="flex items-center gap-1"
             >
-              <Refresh className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
               Update
             </Button>
           ),

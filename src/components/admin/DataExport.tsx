@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { FileDown, FileSpreadsheet, FilePdf } from 'lucide-react';
+import { FileDown, FileSpreadsheet, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 export function DataExport() {
@@ -242,7 +242,7 @@ export function DataExport() {
                 <span>CSV/Excel</span>
               </div>
               <div className="flex items-center">
-                <FilePdf className="h-4 w-4 mr-1" />
+                <FileText className="h-4 w-4 mr-1" />
                 <span>JSON</span>
               </div>
             </div>

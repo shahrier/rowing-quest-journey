@@ -21,11 +21,14 @@ export default function ProfilePage() {
   const [totalDistance, setTotalDistance] = useState(0);
   const [strengthSessions, setStrengthSessions] = useState(0);
   const [badgeCount, setBadgeCount] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeamManager, setIsTeamManager] = useState(false);
 
   useEffect(() => {
     if (user) {
       fetchProfile();
       fetchStats();
+      fetchUserRole();
     }
   }, [user]);
 
@@ -76,7 +79,7 @@ export default function ProfilePage() {
       // Get strength sessions count
       const { count: strengthCount, error: strengthError } = await supabase
         .from('activities')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true})
         .eq('user_id', user?.id)
         .eq('activity_type', 'strength');
         
@@ -87,7 +90,7 @@ export default function ProfilePage() {
       // Get badge count
       const { count: badgesCount, error: badgesError } = await supabase
         .from('user_badges')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true})
         .eq('user_id', user?.id);
         
       if (badgesError) throw badgesError;
@@ -96,6 +99,36 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
+  };
+
+  const fetchUserRole = async () => {
+    // Fetch user role from user_roles
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user role:', error);
+      setIsAdmin(false);
+      setIsTeamManager(false);
+      return;
+    }
+
+    // Check if the role is valid
+    if (!data || !data.role) {
+      console.error('No role found for user:', user.id);
+      setIsAdmin(false);
+      setIsTeamManager(false);
+      return;
+    }
+
+    // Set admin and team manager status
+    const isAdmin = ['admin', 'team_manager'].includes(data.role);
+    setIsAdmin(isAdmin);
+    setIsTeamManager(data.role === 'team_manager');
+    console.log('User role:', data.role, 'Is Admin:', isAdmin);
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {

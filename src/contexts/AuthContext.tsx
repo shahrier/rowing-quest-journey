@@ -68,30 +68,41 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
   const fetchUserRole = async (userId: string) => {
     try {
+      // Fetch user role from user_roles
       const { data, error } = await supabase
-        .from('profiles')
-        .select('role, team_id')
+        .from('user_roles')
+        .select('role')
         .eq('user_id', userId)
         .single();
 
       if (error) {
         console.error('Error fetching user role:', error);
+        setIsAdmin(false);
+        setIsTeamManager(false);
+        setLoading(false);
         return;
       }
 
-      // Set admin status
-      setIsAdmin(data.role === 'admin');
-      
-      // Set team manager status
+      // Check if the role is valid
+      if (!data || !data.role) {
+        console.error('No role found for user:', userId);
+        setIsAdmin(false);
+        setIsTeamManager(false);
+        setLoading(false);
+        return;
+      }
+
+      // Set admin and team manager status
+      const isAdmin = ['admin', 'team_manager'].includes(data.role);
+      setIsAdmin(isAdmin);
       setIsTeamManager(data.role === 'team_manager');
-      
-      // Set team ID
-      setTeamId(data.team_id);
-      
-      console.log('User role:', data.role, 'Team ID:', data.team_id);
+      console.log('User role:', data.role, 'Is Admin:', isAdmin);
+
+      setLoading(false);
     } catch (error) {
       console.error('Error in fetchUserRole:', error);
-    } finally {
+      setIsAdmin(false);
+      setIsTeamManager(false);
       setLoading(false);
     }
   };
@@ -188,6 +199,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: authData.user.id,
           user_id: authData.user.id,
           full_name: fullName,
           email: email,

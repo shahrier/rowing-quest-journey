@@ -11,18 +11,21 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 export default function TeamPage() {
-  const { user, teamId, isAdmin, isTeamManager } = useAuth();
+  const { user, teamId } = useAuth();
   const { toast } = useToast();
   const [hasTeam, setHasTeam] = useState<boolean | null>(null);
   const [availableTeams, setAvailableTeams] = useState<{ id: string; name: string }[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [isJoining, setIsJoining] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeamManager, setIsTeamManager] = useState(false);
 
   useEffect(() => {
     setHasTeam(!!teamId);
     if (!teamId) {
       fetchAvailableTeams();
     }
+    fetchUserRole();
   }, [teamId]);
 
   const fetchAvailableTeams = async () => {
@@ -36,6 +39,36 @@ export default function TeamPage() {
     } catch (error) {
       console.error('Error fetching teams:', error);
     }
+  };
+
+  const fetchUserRole = async () => {
+    // Fetch user role from user_roles
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching user role:', error);
+      setIsAdmin(false);
+      setIsTeamManager(false);
+      return;
+    }
+
+    // Check if the role is valid
+    if (!data || !data.role) {
+      console.error('No role found for user:', user.id);
+      setIsAdmin(false);
+      setIsTeamManager(false);
+      return;
+    }
+
+    // Set admin and team manager status
+    const isAdmin = ['admin', 'team_manager'].includes(data.role);
+    setIsAdmin(isAdmin);
+    setIsTeamManager(data.role === 'team_manager');
+    console.log('User role:', data.role, 'Is Admin:', isAdmin);
   };
 
   const handleJoinTeam = async () => {

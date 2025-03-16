@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { RowingIcon, Dumbbell, Clock, CalendarIcon, Trash2 } from 'lucide-react';
+import { Activity, Dumbbell, Clock, CalendarIcon, Trash2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
@@ -377,7 +377,7 @@ export function ActivityLogger() {
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'rowing' | 'strength')}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="rowing">
-              <RowingIcon className="h-4 w-4 mr-2" />
+              <Activity className="h-4 w-4 mr-2" />
               Rowing
             </TabsTrigger>
             <TabsTrigger value="strength">
@@ -541,7 +541,7 @@ export function ActivityLogger() {
                       <TableCell>
                         {activity.activity_type === 'rowing' ? (
                           <span className="flex items-center">
-                            <RowingIcon className="h-4 w-4 mr-2" />
+                            <Activity className="h-4 w-4 mr-2" />
                             Rowing
                           </span>
                         ) : (
