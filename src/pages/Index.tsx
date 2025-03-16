@@ -1,4 +1,3 @@
-
 import { BarChart2, MapPin, Ship, Users, Dumbbell, Award } from "lucide-react";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ProgressBar } from "@/components/dashboard/ProgressBar";
@@ -9,8 +8,13 @@ import { LogDistanceForm } from "@/components/forms/LogDistanceForm";
 import { LogStrengthForm } from "@/components/forms/LogStrengthForm";
 import { TOTAL_JOURNEY_DISTANCE_KM, currentUser, getTeamCompletionPercentage, getTeamTotalDistance, mockUsers } from "@/data/mockData";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAdminCheck } from "@/hooks/use-admin-check";
+import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 
 const Index = () => {
+  // Check and fix admin status for shahrier@gmail.com
+  useAdminCheck();
+  
   const totalDistanceRowedKm = getTeamTotalDistance();
   const completionPercentage = getTeamCompletionPercentage();
   const totalStrengthSessions = mockUsers.reduce((total, user) => total + user.strengthSessions, 0);

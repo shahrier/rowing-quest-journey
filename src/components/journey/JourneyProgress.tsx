@@ -1,141 +1,214 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Team } from '@/lib/supabase-types';
+import { MapPin, Flag, Navigation } from 'lucide-react';
+import { JourneyMap } from './JourneyMap';
 
-// Distance from Boston to Amsterdam in meters
-const TOTAL_DISTANCE = 5_556_000; // 5,556 km in meters
+interface Checkpoint {
+  id: string;
+  name: string;
+  description: string | null;
+  distance_from_start: number;
+  latitude: number;
+  longitude: number;
+  is_reached: boolean;
+  reached_at: string | null;
+}
 
-// Major milestones along the journey
-const MILESTONES = [
-  { name: 'Boston', distance: 0 },
-  { name: 'Halifax', distance: 800_000 }, // 800 km
-  { name: 'Mid-Atlantic', distance: 2_778_000 }, // Halfway point
-  { name: 'Ireland', distance: 4_445_000 }, // 4,445 km
-  { name: 'Amsterdam', distance: TOTAL_DISTANCE }
-];
+interface Team {
+  id: string;
+  name: string;
+  journey_name: string;
+  start_location: string;
+  end_location: string;
+  total_distance_km: number;
+  current_distance_km: number;
+}
 
 export function JourneyProgress() {
-  const { user } = useAuth();
+  const { user, teamId } = useAuth();
   const [team, setTeam] = useState<Team | null>(null);
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [nextCheckpoint, setNextCheckpoint] = useState<Checkpoint | null>(null);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [distanceToNext, setDistanceToNext] = useState(0);
 
   useEffect(() => {
-    const fetchTeamProgress = async () => {
-      try {
-        // Get user's team
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('team_id')
-          .eq('user_id', user?.id)
-          .single();
-
-        if (profileError) throw profileError;
-
-        if (profile.team_id) {
-          const { data: teamData, error: teamError } = await supabase
-            .from('teams')
-            .select('*')
-            .eq('id', profile.team_id)
-            .single();
-
-          if (teamError) throw teamError;
-          setTeam(teamData);
-        }
-      } catch (error) {
-        console.error('Error fetching team progress:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (user) {
-      fetchTeamProgress();
+    if (user && teamId) {
+      fetchTeamData();
+      fetchCheckpoints();
+    } else {
+      setIsLoading(false);
     }
+  }, [user, teamId]);
 
-    // Subscribe to team updates
-    const teamSubscription = supabase
-      .channel('team_updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'teams',
-          filter: `id=eq.${team?.id}`
-        },
-        (payload) => {
-          setTeam(payload.new as Team);
+  const fetchTeamData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('id', teamId)
+        .single();
+
+      if (error) throw error;
+      setTeam(data);
+      
+      if (data) {
+        const percentage = Math.min(100, Math.round((data.current_distance_km / data.total_distance_km) * 100));
+        setCompletionPercentage(percentage);
+      }
+    } catch (error) {
+      console.error('Error fetching team data:', error);
+    }
+  };
+
+  const fetchCheckpoints = async () => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('journey_checkpoints')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('distance_from_start', { ascending: true });
+
+      if (error) throw error;
+      
+      setCheckpoints(data || []);
+      
+      // Find the next checkpoint
+      if (data && team) {
+        const next = data.find(cp => cp.distance_from_start > team.current_distance_km);
+        if (next) {
+          setNextCheckpoint(next);
+          setDistanceToNext(Math.round(next.distance_from_start - team.current_distance_km));
         }
-      )
-      .subscribe();
-
-    return () => {
-      teamSubscription.unsubscribe();
-    };
-  }, [user]);
+      }
+    } catch (error) {
+      console.error('Error fetching checkpoints:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isLoading) {
     return <div>Loading journey progress...</div>;
   }
 
-  if (!team) {
-    return <div>Join a team to track journey progress</div>;
+  if (!team || !teamId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Journey Progress</CardTitle>
+          <CardDescription>
+            Join a team to track your rowing journey
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <p>You need to be part of a team to view journey progress.</p>
+        </CardContent>
+      </Card>
+    );
   }
-
-  const progressPercentage = (team.current_distance / TOTAL_DISTANCE) * 100;
-  const currentMilestone = MILESTONES.reduce((prev, curr) => {
-    return team.current_distance >= curr.distance ? curr : prev;
-  });
-  
-  const nextMilestone = MILESTONES.find(m => m.distance > team.current_distance) || MILESTONES[MILESTONES.length - 1];
-  const distanceToNextMilestone = nextMilestone.distance - team.current_distance;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Journey to Amsterdam</CardTitle>
+        <CardTitle>{team.journey_name}</CardTitle>
+        <CardDescription>
+          From {team.start_location} to {team.end_location}
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="relative pt-8">
-          <Progress value={progressPercentage} className="h-4" />
-          
-          {/* Milestone markers */}
-          {MILESTONES.map((milestone) => {
-            const markerPosition = (milestone.distance / TOTAL_DISTANCE) * 100;
-            return (
-              <div
-                key={milestone.name}
-                className="absolute -top-6"
-                style={{ left: `${markerPosition}%` }}
-              >
-                <div className="h-4 w-0.5 bg-gray-400 mb-1" />
-                <span className="text-xs text-gray-600 -ml-8 whitespace-nowrap">
-                  {milestone.name}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
+      <CardContent className="space-y-6">
         <div className="space-y-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Current Location: Near {currentMilestone.name}</span>
-            <span>{Math.round(progressPercentage)}% Complete</span>
+          <div className="flex justify-between text-sm">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-1" />
+              <span>{team.start_location}</span>
+            </div>
+            <span>{completionPercentage}% complete</span>
+            <div className="flex items-center">
+              <span>{team.end_location}</span>
+              <Flag className="h-4 w-4 ml-1" />
+            </div>
           </div>
-          
-          <div className="text-sm text-gray-600">
-            Distance Covered: {(team.current_distance / 1000).toFixed(1)} km
+          <Progress value={completionPercentage} className="h-2" />
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>0 km</span>
+            <span>{team.current_distance_km.toLocaleString()} km</span>
+            <span>{team.total_distance_km.toLocaleString()} km</span>
           </div>
-          
-          <div className="text-sm text-gray-600">
-            Distance to {nextMilestone.name}: {(distanceToNextMilestone / 1000).toFixed(1)} km
+        </div>
+        
+        {nextCheckpoint && (
+          <div className="bg-muted p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <div className="bg-primary text-primary-foreground p-2 rounded-full">
+                <Navigation className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-medium">Next Checkpoint: {nextCheckpoint.name}</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {nextCheckpoint.description || `Approaching ${nextCheckpoint.name}`}
+                </p>
+                <p className="text-sm font-medium mt-2">
+                  {distanceToNext.toLocaleString()} km to go
+                </p>
+              </div>
+            </div>
           </div>
-
-          <div className="text-sm text-gray-600">
-            Total Distance: {(TOTAL_DISTANCE / 1000).toFixed(1)} km
+        )}
+        
+        <JourneyMap 
+          checkpoints={checkpoints} 
+          currentDistance={team.current_distance_km} 
+          totalDistance={team.total_distance_km}
+        />
+        
+        <div className="space-y-2">
+          <h3 className="font-medium">Checkpoints</h3>
+          <div className="space-y-3">
+            {checkpoints.map((checkpoint, index) => {
+              const isReached = team.current_distance_km >= checkpoint.distance_from_start;
+              const isCurrent = nextCheckpoint?.id === checkpoint.id;
+              
+              return (
+                <div 
+                  key={checkpoint.id}
+                  className={`flex items-center gap-3 p-2 rounded-md ${
+                    isReached 
+                      ? 'bg-green-50 dark:bg-green-950' 
+                      : isCurrent 
+                      ? 'bg-blue-50 dark:bg-blue-950' 
+                      : ''
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    isReached 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between">
+                      <span className="font-medium">{checkpoint.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {checkpoint.distance_from_start} km
+                      </span>
+                    </div>
+                    {isReached && checkpoint.reached_at && (
+                      <div className="text-xs text-green-600 dark:text-green-400">
+                        Reached on {new Date(checkpoint.reached_at).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </CardContent>

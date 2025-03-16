@@ -1,42 +1,33 @@
-
-import { useAuth } from "@/contexts/AuthContext";
-import { Navigate } from "react-router-dom";
-import { AppRole } from "@/types/auth";
-
-// Hardcoded values for Supabase configuration
-const supabaseUrl = 'https://lqdvtghdufzwrtuszuhr.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZHZ0Z2hkdWZ6d3J0dXN6dWhyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1NTQ2MDYsImV4cCI6MjA1NzEzMDYwNn0.BBPiOdTjXE2ArG6yttLkcmeK9VVirdyD0NTi7HxcDVQ';
-const isMissingCredentials = !supabaseUrl || !supabaseAnonKey;
+import { ReactNode } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/hooks/use-auth';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiredRole?: AppRole;
+  children: ReactNode;
+  requiredRole?: 'admin' | 'team_manager';
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, isAdmin, isLoading } = useAuth();
-
-  // Skip authentication if Supabase isn't configured (development mode)
-  if (isMissingCredentials) {
-    console.warn('Supabase credentials are missing. Authentication is bypassed.');
-    return <>{children}</>;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ocean-500"></div>
-      </div>
-    );
-  }
+  const { user, isAdmin, isTeamManager } = useAuth();
+  const location = useLocation();
 
   if (!user) {
-    return <Navigate to="/login" />;
+    console.log('ProtectedRoute:', { isAdmin, isTeamManager, requiredRole });
+    // Redirect to login if not authenticated
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // If a specific role is required, check for it
+  // Check for required role
   if (requiredRole === 'admin' && !isAdmin) {
-    return <Navigate to="/" />;
+    console.log('ProtectedRoute:', { isAdmin, isTeamManager, requiredRole });
+    // Redirect to home if admin role is required but user is not admin
+    return <Navigate to="/" replace />;
+  }
+
+  if (requiredRole === 'team_manager' && !(isTeamManager || isAdmin)) {
+    console.log('ProtectedRoute:', { isAdmin, isTeamManager, requiredRole });
+    // Redirect to home if team manager role is required but user is neither team manager nor admin
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

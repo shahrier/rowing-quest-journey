@@ -1,280 +1,345 @@
-
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
-import { toast } from '@/hooks/use-toast';
-import { getUserRole, hasRole } from '@/lib/auth-utils';
-import { AuthContextType } from './auth/types';
+import { useToast } from '@/hooks/use-toast';
 import { Session, User } from '@supabase/supabase-js';
-import { UserProfile, AppRole } from '@/types/auth';
 
-const AuthContext = createContext<AuthContextType | null>(null);
+interface AuthContextType {
+  user: User | null;
+  session: Session | null;
+  isAdmin: boolean;
+  isTeamManager: boolean;
+  teamId: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, teamName?: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithFacebook: () => Promise<void>;
+  signInWithTwitter: () => Promise<void>;
+}
 
-// Export AuthContext
-export { AuthContext };
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export default function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const isMissingCredentials = !import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-  console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
-  console.log('Supabase Anon Key:', import.meta.env.VITE_SUPABASE_ANON_KEY);
-
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    if (!userId || isMissingCredentials) return null;
-
-    try {
-      const [profileData, roles] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-          .then(({ data, error }) => {
-            if (error) throw error;
-            return data;
-          }),
-        getUserRole(userId)
-      ]);
-
-      const userIsAdmin = await hasRole(userId, 'admin');
-      setIsAdmin(userIsAdmin);
-
-      const userProfile: UserProfile = {
-        ...profileData,
-        roles
-      };
-
-      setProfile(userProfile);
-      return userProfile;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      return null;
-    }
-  }, [isMissingCredentials]);
-
-  const refreshProfile = async () => {
-    if (user) {
-      await fetchUserProfile(user.id);
-    }
-  };
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeamManager, setIsTeamManager] = useState(false);
+  const [teamId, setTeamId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (isMissingCredentials) {
-      setIsLoading(false);
-      return;
-    }
-
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-
       if (session?.user) {
-        fetchUserProfile(session.user.id).finally(() => {
-          setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
+        fetchUserRole(session.user.id);
       }
     });
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        fetchUserRole(session.user.id);
       } else {
-        setProfile(null);
         setIsAdmin(false);
+        setIsTeamManager(false);
+        setTeamId(null);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [fetchUserProfile, isMissingCredentials]);
+  }, []);
 
-  const handleError = (error: Error) => {
-    console.error('Auth error:', error);
-    toast({
-      title: 'Authentication error',
-      description: error.message,
-      variant: 'destructive',
-    });
+  const fetchUserRole = async (userId: string) => {
+    try {
+      // Fetch user role from user_roles
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        setIsAdmin(false);
+        setIsTeamManager(false);
+        setLoading(false);
+        return;
+      }
+
+      // Check if the role is valid
+      if (!data || !data.role) {
+        console.error('No role found for user:', userId);
+        setIsAdmin(false);
+        setIsTeamManager(false);
+        setLoading(false);
+        return;
+      }
+
+      // Set admin and team manager status
+      const isAdmin = ['admin', 'team_manager'].includes(data.role);
+      setIsAdmin(isAdmin);
+      setIsTeamManager(data.role === 'team_manager');
+      console.log('User role:', data.role, 'Is Admin:', isAdmin);
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error in fetchUserRole:', error);
+      setIsAdmin(false);
+      setIsTeamManager(false);
+      setLoading(false);
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    if (isMissingCredentials) {
-      toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      
-      toast({
-        title: 'Welcome back',
-        description: 'You have been successfully signed in.',
-      });
-    } catch (error) {
-      handleError(error as Error);
-    }
-  };
-
-  const signUp = async (email: string, password: string, name: string) => {
-    if (isMissingCredentials) {
-      toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    try {
-      const { error } = await supabase.auth.signUp({ 
-        email, 
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
         password,
-        options: {
-          data: {
-            full_name: name,
-          }
-        }
       });
-      
-      if (error) throw error;
-      
+
+      if (error) {
+        toast({
+          title: 'Sign in failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       toast({
-        title: 'Account created',
-        description: 'Your account has been created successfully. Please check your email for verification.',
+        title: 'Signed in successfully',
+        description: 'Welcome back!',
       });
     } catch (error) {
-      handleError(error as Error);
+      console.error('Error signing in:', error);
+      toast({
+        title: 'Sign in failed',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     }
   };
 
-  const signInWithGoogle = async () => {
-    if (isMissingCredentials) {
-      toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
-        variant: 'destructive',
+  const signUp = async (email: string, password: string, fullName: string, teamName?: string) => {
+    try {
+      // Create the user account
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
       });
-      return;
-    }
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-    
-    if (error) {
-      throw error;
-    }
-  };
 
-  const signInWithFacebook = async () => {
-    if (isMissingCredentials) {
-      toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-    
-    if (error) {
-      throw error;
-    }
-  };
+      if (authError) {
+        toast({
+          title: 'Sign up failed',
+          description: authError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
 
-  const signInWithTwitter = async () => {
-    if (isMissingCredentials) {
+      if (!authData.user) {
+        toast({
+          title: 'Sign up failed',
+          description: 'User creation failed',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Determine if user is creating a team (will be team manager)
+      const role = teamName ? 'team_manager' : 'user';
+      let teamId = null;
+
+      // If creating a team, create the team first
+      if (teamName) {
+        const { data: teamData, error: teamError } = await supabase
+          .from('teams')
+          .insert({
+            name: teamName,
+            created_by: authData.user.id,
+            journey_name: 'Boston to Rotterdam',
+            start_location: 'Boston',
+            end_location: 'Rotterdam',
+            total_distance_km: 5556,
+          })
+          .select()
+          .single();
+
+        if (teamError) {
+          console.error('Error creating team:', teamError);
+          toast({
+            title: 'Team creation failed',
+            description: teamError.message,
+            variant: 'destructive',
+          });
+          // Continue with user creation even if team creation fails
+        } else {
+          teamId = teamData.id;
+        }
+      }
+
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          user_id: authData.user.id,
+          full_name: fullName,
+          email: email,
+          role: role,
+          team_id: teamId,
+        });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        toast({
+          title: 'Profile creation failed',
+          description: profileError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
+        title: 'Account created successfully',
+        description: teamName 
+          ? `Your team "${teamName}" has been created and you are the team manager.` 
+          : 'Your account has been created. You can now join a team.',
+      });
+    } catch (error) {
+      console.error('Error signing up:', error);
+      toast({
+        title: 'Sign up failed',
+        description: 'An unexpected error occurred',
         variant: 'destructive',
       });
-      return;
-    }
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'twitter',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    });
-    
-    if (error) {
-      throw error;
     }
   };
 
   const signOut = async () => {
-    if (isMissingCredentials) {
-      toast({
-        title: 'Configuration missing',
-        description: 'Supabase credentials are not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
       toast({
         title: 'Signed out successfully',
       });
     } catch (error) {
-      handleError(error as Error);
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Sign out failed',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        isAdmin,
-        session,
-        isLoading,
-        signIn,
-        signUp,
-        signInWithGoogle,
-        signInWithFacebook,
-        signInWithTwitter,
-        signOut,
-        refreshProfile,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const signInWithGoogle = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+      if (error) {
+        toast({
+          title: 'Google sign in failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+      toast({
+        title: 'Google sign in failed',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
 
-export default AuthProvider;
+  const signInWithFacebook = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast({
+          title: 'Facebook sign in failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error signing in with Facebook:', error);
+      toast({
+        title: 'Facebook sign in failed',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const signInWithTwitter = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'twitter',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast({
+          title: 'Twitter sign in failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error signing in with Twitter:', error);
+      toast({
+        title: 'Twitter sign in failed',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const value = {
+    user,
+    session,
+    isAdmin,
+    isTeamManager,
+    teamId,
+    signIn,
+    signUp,
+    signOut,
+    signInWithGoogle,
+    signInWithFacebook,
+    signInWithTwitter,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
