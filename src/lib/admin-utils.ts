@@ -36,7 +36,8 @@ export const setupAdminUser = async (email: string) => {
           email: email,
           full_name: authData.user.user_metadata?.full_name || email.split('@')[0],
           role: 'admin',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         });
 
       if (insertError) {
