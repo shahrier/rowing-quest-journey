@@ -13,6 +13,7 @@ export interface Database {
         Row: {
           id: string
           user_id: string
+          team_id: string
           activity_type: string
           distance: number | null
           duration: number | null
@@ -22,6 +23,7 @@ export interface Database {
         Insert: {
           id?: string
           user_id: string
+          team_id: string
           activity_type: string
           distance?: number | null
           duration?: number | null
@@ -31,6 +33,7 @@ export interface Database {
         Update: {
           id?: string
           user_id?: string
+          team_id?: string
           activity_type?: string
           distance?: number | null
           duration?: number | null
@@ -42,6 +45,12 @@ export interface Database {
             foreignKeyName: "activities_user_id_fkey"
             columns: ["user_id"]
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_team_id_fkey"
+            columns: ["team_id"]
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           }
         ]
@@ -191,6 +200,7 @@ export interface Database {
           role: string
           team_id: string | null
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
@@ -201,6 +211,7 @@ export interface Database {
           role?: string
           team_id?: string | null
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
@@ -211,6 +222,7 @@ export interface Database {
           role?: string
           team_id?: string | null
           created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -233,33 +245,30 @@ export interface Database {
           name: string
           created_by: string
           created_at: string
-          journey_name: string
-          start_location: string
-          end_location: string
-          total_distance_km: number
-          current_distance_km: number
+          updated_at: string
+          description: string | null
+          goal_distance: number | null
+          current_distance: number
         }
         Insert: {
           id?: string
           name: string
           created_by: string
           created_at?: string
-          journey_name: string
-          start_location: string
-          end_location: string
-          total_distance_km: number
-          current_distance_km?: number
+          updated_at?: string
+          description?: string | null
+          goal_distance?: number | null
+          current_distance?: number
         }
         Update: {
           id?: string
           name?: string
           created_by?: string
           created_at?: string
-          journey_name?: string
-          start_location?: string
-          end_location?: string
-          total_distance_km?: number
-          current_distance_km?: number
+          updated_at?: string
+          description?: string | null
+          goal_distance?: number | null
+          current_distance?: number
         }
         Relationships: [
           {
@@ -309,10 +318,20 @@ export interface Database {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_badge_requirements: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      update_team_distance: {
+        Args: {
+          team_id: string
+          distance_to_add: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
-      [_ in never]: never
+      badge_tier: "bronze" | "silver" | "gold"
     }
     CompositeTypes: {
       [_ in never]: never

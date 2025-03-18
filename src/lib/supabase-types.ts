@@ -24,11 +24,10 @@ export interface Team {
   name: string;
   created_by: string;
   created_at: string;
-  journey_name: string;
-  start_location: string;
-  end_location: string;
-  total_distance_km: number;
-  current_distance_km: number;
+  updated_at: string;
+  description: string | null;
+  goal_distance: number | null;
+  current_distance: number;
 }
 
 export interface Profile {
@@ -40,11 +39,13 @@ export interface Profile {
   role: 'admin' | 'team_manager' | 'user';
   team_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Activity {
   id: string;
   user_id: string;
+  team_id: string;
   activity_type: 'rowing' | 'strength';
   distance: number | null;
   duration: number | null;
@@ -57,7 +58,7 @@ export interface Media {
   user_id: string;
   team_id: string;
   url: string;
-  type: 'image' | 'video';
+  type: 'photo' | 'video';
   caption: string | null;
   created_at: string;
 }
@@ -73,3 +74,5 @@ export interface JourneyCheckpoint {
   is_reached: boolean;
   reached_at: string | null;
 }
+
+export type AppRole = 'admin' | 'team_manager' | 'user';
