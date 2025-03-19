@@ -1,14 +1,11 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
 
-export function ToastProvider() {
+export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* shadcn/ui Toaster */}
+      {children}
       <Toaster />
-      
-      {/* Sonner Toaster (if you need both) */}
-      <Sonner />
     </>
   );
 }
