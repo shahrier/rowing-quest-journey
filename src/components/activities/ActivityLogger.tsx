@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Activity, Dumbbell, Clock, CalendarIcon, Trash2 } from "lucide-react";
+import { Activity, Dumbbell, Clock, CalendarIcon, Trash2, AlertCircle } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -39,6 +39,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface Activity {
   id: string;
@@ -55,6 +56,7 @@ export function ActivityLogger() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"rowing" | "strength">("rowing");
+  const [error, setError] = useState<string | null>(null);
 
   // Form states
   const [rowingDistance, setRowingDistance] = useState("");
@@ -81,6 +83,7 @@ export function ActivityLogger() {
   const fetchActivities = async () => {
     try {
       setIsLoading(true);
+      setError(null);
 
       const { data, error } = await supabase
         .from("activities")
@@ -91,8 +94,9 @@ export function ActivityLogger() {
 
       if (error) throw error;
       setActivities(data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching activities:", error);
+      setError("Failed to load your activities. Please try again later.");
       toast({
         title: "Error",
         description: "Failed to load your activities",
@@ -105,11 +109,30 @@ export function ActivityLogger() {
 
   const handleLogRowing = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!rowingDistance) {
       toast({
         title: "Missing information",
         description: "Please enter a distance",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isNaN(parseFloat(rowingDistance)) || parseFloat(rowingDistance) <= 0) {
+      toast({
+        title: "Invalid distance",
+        description: "Please enter a valid distance greater than 0",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (rowingDuration && (isNaN(parseFloat(rowingDuration)) || parseFloat(rowingDuration) <= 0)) {
+      toast({
+        title: "Invalid duration",
+        description: "Please enter a valid duration greater than 0",
         variant: "destructive",
       });
       return;
@@ -152,8 +175,9 @@ export function ActivityLogger() {
 
       // Refresh activities
       fetchActivities();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error logging rowing activity:", error);
+      setError("Failed to log your activity. Please try again.");
       toast({
         title: "Error",
         description: "Failed to log your activity",
@@ -166,11 +190,21 @@ export function ActivityLogger() {
 
   const handleLogStrength = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!strengthDuration) {
       toast({
         title: "Missing information",
         description: "Please enter a duration",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (isNaN(parseFloat(strengthDuration)) || parseFloat(strengthDuration) <= 0) {
+      toast({
+        title: "Invalid duration",
+        description: "Please enter a valid duration greater than 0",
         variant: "destructive",
       });
       return;
@@ -209,8 +243,9 @@ export function ActivityLogger() {
 
       // Refresh activities
       fetchActivities();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error logging strength activity:", error);
+      setError("Failed to log your activity. Please try again.");
       toast({
         title: "Error",
         description: "Failed to log your activity",
@@ -225,6 +260,8 @@ export function ActivityLogger() {
     if (!activityToDelete) return;
 
     try {
+      setError(null);
+      
       // Get the activity details first to handle team distance updates
       const { data: activity, error: fetchError } = await supabase
         .from("activities")
@@ -255,8 +292,9 @@ export function ActivityLogger() {
       // Refresh activities
       fetchActivities();
       setIsDeleteDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting activity:", error);
+      setError("Failed to delete your activity. Please try again.");
       toast({
         title: "Error",
         description: "Failed to delete your activity",
@@ -408,6 +446,14 @@ export function ActivityLogger() {
         </CardDescription>
       </CardHeader>
       <CardContent data-oid="jzmr85q">
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <Tabs
           value={activeTab}
           onValueChange={(value) =>
@@ -631,14 +677,18 @@ export function ActivityLogger() {
           </h3>
           {isLoading ? (
             <div className="text-center py-4" data-oid="m8zrrhw">
-              Loading activities...
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-2 text-sm text-muted-foreground">Loading activities...</p>
             </div>
           ) : activities.length === 0 ? (
             <div
-              className="text-center py-4 text-muted-foreground"
+              className="text-center py-8 border rounded-md bg-muted/20"
               data-oid="9srled3"
             >
-              You haven't logged any activities yet
+              <p className="text-muted-foreground mb-2">You haven't logged any activities yet</p>
+              <p className="text-sm text-muted-foreground">
+                Start by logging a rowing or strength training session above
+              </p>
             </div>
           ) : (
             <div className="rounded-md border" data-oid="qflridf">
