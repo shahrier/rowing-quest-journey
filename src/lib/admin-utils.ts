@@ -1,68 +1,42 @@
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
-export const setupAdminUser = async (email: string) => {
+export const setupAdminUser = async (email: string): Promise<boolean> => {
   try {
-    // First, get the user from auth
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    
-    if (authError) {
-      console.error('Error getting auth user:', authError);
-      return false;
-    }
-
-    if (!authData.user) {
-      console.error('No authenticated user found');
-      return false;
-    }
-
-    // Check if user exists in profiles table
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', authData.user.id)
+    // First, get the user ID from the email
+    const { data: userData, error: userError } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("email", email)
       .single();
 
-    if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "no rows returned"
-      console.error('Error checking profile:', profileError);
+    if (userError) {
+      console.error("Error finding user:", userError);
       return false;
     }
 
-    if (!profileData) {
-      // Create profile if it doesn't exist
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          email: email,
-          full_name: authData.user.user_metadata?.full_name || email.split('@')[0],
-          role: 'admin',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
-
-      if (insertError) {
-        console.error('Error creating profile:', insertError);
-        return false;
-      }
-    } else if (profileData.role !== 'admin') {
-      // Update existing profile to admin
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          role: 'admin',
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', authData.user.id);
-
-      if (updateError) {
-        console.error('Error updating role:', updateError);
-        return false;
-      }
+    if (!userData || !userData.user_id) {
+      console.error("User not found with email:", email);
+      return false;
     }
 
+    // Update the user's role to admin
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ 
+        role: "admin",
+        updated_at: new Date().toISOString()
+      })
+      .eq("user_id", userData.user_id);
+
+    if (updateError) {
+      console.error("Error updating user role:", updateError);
+      return false;
+    }
+
+    console.log(`User ${email} has been granted admin privileges`);
     return true;
   } catch (error) {
-    console.error('Error in setupAdminUser:', error);
+    console.error("Error in setupAdminUser:", error);
     return false;
   }
 };

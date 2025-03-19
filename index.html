@@ -1,22 +1,64 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RowQuest - Team Rowing Journey</title>
-    <meta name="description" content="Track your team's rowing journey from Boston to Rotterdam" />
-    <meta name="author" content="RowQuest" />
-    <meta property="og:image" content="/og-image.png" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1E40AF" />
-    <link rel="apple-touch-icon" href="/placeholder.svg">
-  </head>
-
-  <body>
-    <div id="root"></div>
-    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
-    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RowQuest</title>
+  <style>
+    /* Ensure the root element takes full height */
+    html, body, #root {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Add a fallback style in case CSS isn't loading */
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    
+    /* Style for the loading indicator */
+    .app-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      text-align: center;
+    }
+    
+    .app-loading-spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left-color: #3b82f6;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <!-- Fallback content if JS fails to load -->
+    <div class="app-loading">
+      <div class="app-loading-spinner"></div>
+      <p>Loading RowQuest...</p>
+      <noscript>
+        <p style="color: #e11d48; margin-top: 20px;">
+          JavaScript is required to run this application.
+          Please enable JavaScript in your browser settings.
+        </p>
+      </noscript>
+    </div>
+  </div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
 </html>

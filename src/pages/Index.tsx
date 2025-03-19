@@ -1,105 +1,131 @@
-import { BarChart2, MapPin, Ship, Users, Dumbbell, Award } from "lucide-react";
-import { StatsCard } from "@/components/dashboard/StatsCard";
-import { ProgressBar } from "@/components/dashboard/ProgressBar";
-import { TeamRanking } from "@/components/dashboard/TeamRanking";
-import { JourneyMap } from "@/components/dashboard/JourneyMap";
-import { RecentAchievements } from "@/components/dashboard/RecentAchievements";
-import { LogDistanceForm } from "@/components/forms/LogDistanceForm";
-import { LogStrengthForm } from "@/components/forms/LogStrengthForm";
-import {
-  TOTAL_JOURNEY_DISTANCE_KM,
-  currentUser,
-  getTeamCompletionPercentage,
-  getTeamTotalDistance,
-  mockUsers,
-} from "@/data/mockData";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAdminCheck } from "@/hooks/use-admin-check";
-import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
+import React, { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 
-const Index = () => {
-  // Check and fix admin status for shahrier@gmail.com
-  useAdminCheck();
-
-  const totalDistanceRowedKm = getTeamTotalDistance();
-  const completionPercentage = getTeamCompletionPercentage();
-  const totalStrengthSessions = mockUsers.reduce(
-    (total, user) => total + user.strengthSessions,
-    0,
-  );
-  const remainingDistanceKm = TOTAL_JOURNEY_DISTANCE_KM - totalDistanceRowedKm;
-  const totalDistanceRowedM = totalDistanceRowedKm * 1000;
-
+export default function Index() {
+  console.log("🏠 Index page component rendering");
+  const mountedRef = useRef(false);
+  const [renderCount, setRenderCount] = useState(0);
+  
+  // Log when component mounts
+  useEffect(() => {
+    console.log("🔄 Index page mounted");
+    mountedRef.current = true;
+    
+    // Log DOM structure for debugging
+    const rootElement = document.getElementById("root");
+    if (rootElement) {
+      console.log("📊 Root element found with children:", rootElement.childElementCount);
+      
+      // Log the DOM tree structure (up to 3 levels deep)
+      const logDOMTree = (element: Element, depth = 0, maxDepth = 3) => {
+        if (depth > maxDepth) return;
+        
+        const children = Array.from(element.children);
+        console.log(
+          "  ".repeat(depth) + 
+          `<${element.tagName.toLowerCase()}${element.id ? ` id="${element.id}"` : ''}${element.className ? ` class="${element.className}"` : ''}> ` +
+          `(${children.length} children)`
+        );
+        
+        children.forEach(child => logDOMTree(child, depth + 1, maxDepth));
+      };
+      
+      console.group("📋 DOM Tree Structure");
+      logDOMTree(rootElement);
+      console.groupEnd();
+    } else {
+      console.warn("⚠️ Root element not found in DOM");
+    }
+    
+    // Check CSS variables
+    try {
+      const rootStyles = getComputedStyle(document.documentElement);
+      const cssVars = {
+        background: rootStyles.getPropertyValue('--background'),
+        foreground: rootStyles.getPropertyValue('--foreground'),
+        primary: rootStyles.getPropertyValue('--primary'),
+        radius: rootStyles.getPropertyValue('--radius'),
+      };
+      console.log("🎨 CSS Variables:", cssVars);
+    } catch (e) {
+      console.error("❌ Error checking CSS variables:", e);
+    }
+    
+    return () => {
+      console.log("🧹 Index page unmounting");
+    };
+  }, []);
+  
+  // Track render count
+  useEffect(() => {
+    setRenderCount(prev => prev + 1);
+  }, []);
+  
+  // Log render count
+  useEffect(() => {
+    console.log(`🔄 Index page render count: ${renderCount}`);
+  }, [renderCount]);
+  
+  console.log("🖌️ Index page rendering UI");
+  
   return (
-    <div className="space-y-6" data-oid="pocqsrj">
-      <div data-oid="kx0t59l">
-        <h1 className="text-3xl font-bold mb-2" data-oid="1ttegd6">
-          Welcome back, {currentUser.name}
-        </h1>
-        <p className="text-muted-foreground" data-oid="ed2.jgs">
-          Track your team's rowing journey from Boston to Rotterdam
-        </p>
-      </div>
-
-      <ProgressBar data-oid="cs36hbl" />
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-oid="27:qcl9">
-        <StatsCard
-          title="Total Distance"
-          value={`${totalDistanceRowedM.toLocaleString()} m`}
-          description={`${Math.round(totalDistanceRowedM / mockUsers.length).toLocaleString()} m per person average`}
-          icon={Ship}
-          trend={{ value: 12, isPositive: true }}
-          data-oid="xjbn55h"
-        />
-
-        <StatsCard
-          title="Distance Remaining"
-          value={`${(remainingDistanceKm * 1000).toLocaleString()} m`}
-          description={`${completionPercentage}% of journey completed`}
-          icon={MapPin}
-          data-oid="lil0bie"
-        />
-
-        <StatsCard
-          title="Strength Sessions"
-          value={totalStrengthSessions}
-          description={`${(totalStrengthSessions / mockUsers.length).toFixed(1)} sessions per person`}
-          icon={Dumbbell}
-          trend={{ value: 8, isPositive: true }}
-          data-oid="s02zl5i"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" data-oid="71isorj">
-        <div className="lg:col-span-2 space-y-6" data-oid="m7-ylax">
-          <JourneyMap data-oid=".7op6la" />
-          <RecentAchievements data-oid="r5c9si9" />
+    <div className="min-h-screen flex items-center justify-center bg-background p-4" data-testid="index-page">
+      <div className="w-full max-w-md space-y-8 text-center">
+        <div className="mx-auto relative w-24 h-24">
+          <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-blue-500 to-green-500 blur opacity-70"></div>
+          <div className="relative flex items-center justify-center h-24 w-24 rounded-full bg-blue-700 text-white text-4xl font-bold">
+            R
+          </div>
         </div>
-
-        <div className="space-y-6" data-oid="xj318mt">
-          <TeamRanking data-oid="r_lg.lm" />
-
-          <Tabs defaultValue="rowing" data-oid="g96p:px">
-            <TabsList className="grid grid-cols-2 mb-4" data-oid="3pqw54-">
-              <TabsTrigger value="rowing" data-oid="muqf.36">
-                Rowing
-              </TabsTrigger>
-              <TabsTrigger value="strength" data-oid="_.5jlgw">
-                Strength
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="rowing" data-oid="keuvxs:">
-              <LogDistanceForm data-oid="7nt:fbl" />
-            </TabsContent>
-            <TabsContent value="strength" data-oid="vrp10b8">
-              <LogStrengthForm data-oid="lgy7c7i" />
-            </TabsContent>
-          </Tabs>
+        
+        <div>
+          <h1 className="text-3xl font-bold">Welcome to RowQuest</h1>
+          <p className="mt-2 text-muted-foreground">
+            Track your rowing journey to your destination
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Render count: {renderCount}
+          </p>
+        </div>
+        
+        <div className="pt-4">
+          <Link 
+            to="/login" 
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2"
+          >
+            Login / Register
+          </Link>
+        </div>
+        
+        <div className="pt-4 text-sm text-muted-foreground">
+          <p>
+            If you're experiencing issues, visit our{" "}
+            <Link to="/troubleshooting" className="text-primary hover:underline">
+              troubleshooting page
+            </Link>
+          </p>
+        </div>
+        
+        <div className="pt-4 text-xs text-muted-foreground/70">
+          <button 
+            onClick={() => {
+              console.log("🔍 Running diagnostics from Index page");
+              // @ts-ignore
+              if (window.__diagnostics?.run) {
+                // @ts-ignore
+                window.__diagnostics.run().then(results => {
+                  console.log("📊 Diagnostics results:", results);
+                });
+              } else {
+                console.warn("⚠️ Diagnostics not available");
+              }
+            }}
+            className="text-primary hover:underline"
+          >
+            Run Diagnostics
+          </button>
         </div>
       </div>
     </div>
   );
-};
-
-export default Index;
+}

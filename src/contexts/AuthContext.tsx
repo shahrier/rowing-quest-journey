@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import React, { createContext, useState, useEffect, useContext } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Session, User } from "@supabase/supabase-js";
@@ -14,76 +8,76 @@ interface AuthContextType {
   session: Session | null;
   isAdmin: boolean;
   isTeamManager: boolean;
-  teamId: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (
-    email: string,
-    password: string,
-    fullName: string,
-    teamName?: string,
-  ) => Promise<void>;
+  isLoading: boolean;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
   signInWithTwitter: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-export default function AuthProvider({ children }: AuthProviderProps) {
+const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTeamManager, setIsTeamManager] = useState(false);
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setIsLoading(false);
+
+        if (session?.user) {
+          await checkUserRole(session.user.id);
+        }
+      }
+    );
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      }
-    });
+    const initializeAuth = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      } else {
-        setIsAdmin(false);
-        setIsTeamManager(false);
-        setTeamId(null);
+        if (data.session?.user) {
+          await checkUserRole(data.session.user.id);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setIsLoading(false);
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
-  const fetchUserRole = async (userId: string) => {
+  const checkUserRole = async (userId: string) => {
     try {
-      // Fetch user role from user_roles
       const { data, error } = await supabase
-        .from("user_roles")
+        .from("profiles")
         .select("role")
         .eq("user_id", userId)
         .single();
@@ -92,35 +86,25 @@ export default function AuthProvider({ children }: AuthProviderProps) {
         console.error("Error fetching user role:", error);
         setIsAdmin(false);
         setIsTeamManager(false);
-        setLoading(false);
         return;
       }
 
-      // Check if the role is valid
-      if (!data || !data.role) {
-        console.log("No role found for user:", userId);
-        setIsAdmin(false);
-        setIsTeamManager(false);
-        setLoading(false);
-        return;
-      }
-
-      // Set admin and team manager status
-      const isAdmin = ["admin", "team_manager"].includes(data.role);
-      setIsAdmin(isAdmin);
+      setIsAdmin(data.role === "admin");
       setIsTeamManager(data.role === "team_manager");
-      console.log("User role:", data.role, "Is Admin:", isAdmin);
-
-      setLoading(false);
     } catch (error) {
-      console.error("Error in fetchUserRole:", error);
+      console.error("Error checking user role:", error);
       setIsAdmin(false);
       setIsTeamManager(false);
-      setLoading(false);
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const refreshProfile = async () => {
+    if (user) {
+      await checkUserRole(user.id);
+    }
+  };
+
+  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -128,220 +112,96 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       });
 
       if (error) {
-        toast({
-          title: "Sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return;
+        return { success: false, error: error.message };
       }
 
-      toast({
-        title: "Signed in successfully",
-        description: "Welcome back!",
-      });
-    } catch (error) {
-      console.error("Error signing in:", error);
-      toast({
-        title: "Sign in failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
+      return { success: true };
+    } catch (error: any) {
+      console.error("Sign in error:", error);
+      return { success: false, error: error.message || "An unexpected error occurred" };
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    fullName: string,
-    teamName?: string,
-  ) => {
+  const signUp = async (email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string; userId?: string }> => {
     try {
-      // Create the user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Sign up the user
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
       });
 
-      if (authError) {
-        console.error("Auth error:", authError);
-        toast({
-          title: "Sign up failed",
-          description: authError.message,
-          variant: "destructive",
-        });
-        return;
+      if (error) {
+        return { success: false, error: error.message };
       }
 
-      if (!authData.user) {
-        console.error("User creation failed");
-        toast({
-          title: "Sign up failed",
-          description: "User creation failed",
-          variant: "destructive",
-        });
-        return;
+      if (!data.user) {
+        return { success: false, error: "User creation failed" };
       }
 
-      // Determine if user is creating a team (will be team manager)
-      const role = teamName ? "team_manager" : "user";
-      let teamId = null;
-
-      // If creating a team, create the team first
-      if (teamName) {
-        const { data: teamData, error: teamError } = await supabase
-          .from("teams")
-          .insert({
-            name: teamName,
-            created_by: authData.user.id,
-            journey_name: "Boston to Rotterdam",
-            start_location: "Boston",
-            end_location: "Rotterdam",
-            total_distance_km: 5556,
-          })
-          .select()
-          .single();
-
-        if (teamError) {
-          console.error("Error creating team:", teamError);
-          toast({
-            title: "Team creation failed",
-            description: teamError.message,
-            variant: "destructive",
-          });
-        } else {
-          teamId = teamData.id;
-        }
-      }
-
-      // Create user profile
+      // Create a profile for the user
       const { error: profileError } = await supabase.from("profiles").insert({
-        id: authData.user.id,
-        user_id: authData.user.id,
-        full_name: fullName,
+        user_id: data.user.id,
         email: email,
-        role: role,
-        team_id: teamId,
+        full_name: fullName,
+        role: "user",
+        created_at: new Date().toISOString(),
       });
 
       if (profileError) {
         console.error("Error creating profile:", profileError);
-        toast({
-          title: "Profile creation failed",
-          description: profileError.message,
-          variant: "destructive",
-        });
-        return;
+        return { success: true, userId: data.user.id, error: "Account created but profile setup failed. Please contact support." };
       }
 
-      toast({
-        title: "Account created successfully",
-        description: teamName
-          ? `Your team "${teamName}" has been created and you are the team manager.`
-          : "Your account has been created. You can now join a team.",
-      });
-    } catch (error) {
-      console.error("Error signing up:", error);
-      toast({
-        title: "Sign up failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
+      return { success: true, userId: data.user.id };
+    } catch (error: any) {
+      console.error("Sign up error:", error);
+      return { success: false, error: error.message || "An unexpected error occurred" };
     }
   };
 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
-      toast({
-        title: "Signed out successfully",
-      });
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Sign out error:", error);
       toast({
-        title: "Sign out failed",
-        description: "An unexpected error occurred",
+        title: "Error",
+        description: "Failed to sign out",
         variant: "destructive",
       });
     }
   };
 
   const signInWithGoogle = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        toast({
-          title: "Google sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error signing in with Google:", error);
-      toast({
-        title: "Google sign in failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   };
 
   const signInWithFacebook = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        toast({
-          title: "Facebook sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error signing in with Facebook:", error);
-      toast({
-        title: "Facebook sign in failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
+    await supabase.auth.signInWithOAuth({
+      provider: "facebook",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   };
 
   const signInWithTwitter = async () => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "twitter",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        toast({
-          title: "Twitter sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error signing in with Twitter:", error);
-      toast({
-        title: "Twitter sign in failed",
-        description: "An unexpected error occurred",
-        variant: "destructive",
-      });
-    }
+    await supabase.auth.signInWithOAuth({
+      provider: "twitter",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   };
 
   const value = {
@@ -349,18 +209,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     session,
     isAdmin,
     isTeamManager,
-    teamId,
+    isLoading,
     signIn,
     signUp,
     signOut,
     signInWithGoogle,
     signInWithFacebook,
     signInWithTwitter,
+    refreshProfile,
   };
 
-  return (
-    <AuthContext.Provider value={value} data-oid="hrrif87">
-      {children}
-    </AuthContext.Provider>
-  );
-}
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export default AuthProvider;

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/hooks/use-auth";
+import { supabase } from "@/lib/supabase";
 
 export default function Login() {
   const {
@@ -31,6 +32,7 @@ export default function Login() {
   const [isCreatingTeam, setIsCreatingTeam] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessingSocial, setIsProcessingSocial] = useState(false);
+  const [signUpError, setSignUpError] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -50,16 +52,44 @@ export default function Login() {
     }
 
     setIsSubmitting(true);
-    await signIn(loginEmail, loginPassword);
-    setIsSubmitting(false);
+    try {
+      const result = await signIn(loginEmail, loginPassword);
+      if (!result.success) {
+        toast({
+          title: "Login failed",
+          description: result.error || "Invalid email or password",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSignUpError("");
+
     if (!registerEmail || !registerPassword || !registerName) {
       toast({
         title: "Missing fields",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (registerPassword.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
         variant: "destructive",
       });
       return;
@@ -75,8 +105,85 @@ export default function Login() {
     }
 
     setIsSubmitting(true);
-    await signUp(registerEmail, registerPassword, registerName);
-    setIsSubmitting(false);
+    try {
+      // Sign up the user
+      const result = await signUp(registerEmail, registerPassword, registerName);
+      
+      if (!result.success) {
+        setSignUpError(result.error || "Failed to create account");
+        toast({
+          title: "Registration failed",
+          description: result.error || "Failed to create account",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // If user wants to create a team, create it now
+      if (isCreatingTeam && registerTeamName && result.userId) {
+        try {
+          // Create a new team
+          const { data: teamData, error: teamError } = await supabase
+            .from("teams")
+            .insert({
+              name: registerTeamName,
+              created_by: result.userId,
+              created_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (teamError) throw teamError;
+
+          // Update the user's profile with the team_id and set role to team_manager
+          if (teamData) {
+            const { error: profileError } = await supabase
+              .from("profiles")
+              .update({
+                team_id: teamData.id,
+                role: "team_manager",
+              })
+              .eq("user_id", result.userId);
+
+            if (profileError) throw profileError;
+          }
+
+          toast({
+            title: "Success!",
+            description: "Account created and team set up successfully. Please check your email to verify your account.",
+          });
+        } catch (error) {
+          console.error("Team creation error:", error);
+          toast({
+            title: "Team Creation Failed",
+            description: "Your account was created, but we couldn't set up your team. You can try again later in the team settings.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Account created",
+          description: "Your account has been created successfully. Please check your email to verify your account.",
+        });
+      }
+
+      // Reset form
+      setRegisterEmail("");
+      setRegisterPassword("");
+      setRegisterName("");
+      setRegisterTeamName("");
+      setIsCreatingTeam(false);
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSocialSignIn = async (
@@ -386,6 +493,12 @@ export default function Login() {
                     As a team creator, you'll be the team manager with admin
                     privileges
                   </p>
+                </div>
+              )}
+
+              {signUpError && (
+                <div className="text-sm text-red-500 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                  {signUpError}
                 </div>
               )}
 

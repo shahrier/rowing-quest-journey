@@ -1,127 +1,153 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { Suspense, lazy, useState, useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./providers/ThemeProvider";
-import AuthProvider from "./contexts/AuthContext";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { UpdateNotification } from "./components/pwa/UpdateNotification";
+import { ToastProvider } from "./providers/ToastProvider";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { verifySupabaseConnection } from "./lib/supabase";
 
-// Pages
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import Admin from "./pages/Admin";
-import JourneyMapPage from "./pages/JourneyMapPage";
-import StatsPage from "./pages/StatsPage";
-import TrainingPage from "./pages/TrainingPage";
-import TeamPage from "./pages/TeamPage";
-import AchievementsPage from "./pages/AchievementsPage";
-import ProfilePage from "./pages/ProfilePage";
-import SettingsPage from "./pages/SettingsPage";
-import TroubleshootingPage from "./pages/TroubleshootingPage";
-import { Layout } from "./components/layout/Layout";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-
-// Create a client
-const queryClient = new QueryClient();
-
-const App = () => (
-  <BrowserRouter data-oid="95kcggy">
-    <ThemeProvider defaultTheme="system" data-oid="hzuc_42">
-      <QueryClientProvider client={queryClient} data-oid="y9691vs">
-        <AuthProvider data-oid="adnw5w5">
-          <Routes data-oid="o51gw4x">
-            <Route
-              path="/login"
-              element={<Login data-oid=":_w7fid" />}
-              data-oid="zdbyw9m"
-            />
-
-            <Route
-              element={
-                <ProtectedRoute data-oid=":-1yc4x">
-                  <Layout data-oid="9xpzisx" />
-                </ProtectedRoute>
-              }
-              data-oid="5nmnq4j"
-            >
-              <Route
-                path="/"
-                element={<Index data-oid="op4drti" />}
-                data-oid="w-ehpzx"
-              />
-
-              <Route
-                path="/journey"
-                element={<JourneyMapPage data-oid="9zx_rgx" />}
-                data-oid="xw7yy35"
-              />
-
-              <Route
-                path="/stats"
-                element={<StatsPage data-oid="y8lj3je" />}
-                data-oid="3glkruk"
-              />
-
-              <Route
-                path="/training"
-                element={<TrainingPage data-oid="0xgcnm8" />}
-                data-oid="hbmvugf"
-              />
-
-              <Route
-                path="/team"
-                element={<TeamPage data-oid="119rb1b" />}
-                data-oid="vh-ze3."
-              />
-
-              <Route
-                path="/achievements"
-                element={<AchievementsPage data-oid=":wgwhuc" />}
-                data-oid="6z-j9:v"
-              />
-
-              <Route
-                path="/profile"
-                element={<ProfilePage data-oid="7n-ra1l" />}
-                data-oid="bew3n2l"
-              />
-
-              <Route
-                path="/settings"
-                element={<SettingsPage data-oid="aaeh_bh" />}
-                data-oid="36r-8r4"
-              />
-
-              <Route
-                path="/troubleshooting"
-                element={<TroubleshootingPage data-oid="troubleshooting" />}
-                data-oid="troubleshooting"
-              />
-
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute requiredRole="admin" data-oid="khh6y3q">
-                    <Admin data-oid="b.q5xi0" />
-                  </ProtectedRoute>
-                }
-                data-oid="3idnu6_"
-              />
-            </Route>
-            <Route
-              path="*"
-              element={<NotFound data-oid="93d-7oj" />}
-              data-oid="g6ep3jx"
-            />
-          </Routes>
-          <UpdateNotification data-oid="pih:ltn" />
-          <Toaster data-oid="r4r1nbd" />
-          <Sonner data-oid="eaki_nv" />
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
-  </BrowserRouter>
+// Simple loading component
+const LoadingFallback = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+      <p className="mt-4 text-muted-foreground">Loading...</p>
+    </div>
+  </div>
 );
+
+// Simple error fallback
+const ErrorFallback = ({ error }: { error: Error }) => (
+  <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="w-full max-w-md space-y-4 text-center">
+      <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">Something went wrong</h2>
+      <p className="text-muted-foreground">{error.message}</p>
+      <button 
+        onClick={() => window.location.reload()} 
+        className="px-4 py-2 bg-primary text-primary-foreground rounded"
+      >
+        Reload Application
+      </button>
+    </div>
+  </div>
+);
+
+// Lazy load components to reduce initial bundle size
+const Login = lazy(() => import("./pages/Login"));
+const Index = lazy(() => import("./pages/Index"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const App = () => {
+  console.log("🏁 App component rendering started");
+  
+  const [appReady, setAppReady] = useState(false);
+  const [initError, setInitError] = useState<Error | null>(null);
+  const [dbStatus, setDbStatus] = useState<{connected: boolean, error?: string} | null>(null);
+
+  // Initialize app and handle any startup errors
+  useEffect(() => {
+    console.log("⚙️ App useEffect initialization started");
+    
+    const initializeApp = async () => {
+      console.log("🔄 Starting app initialization process");
+      
+      try {
+        // Check environment variables
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          console.warn("⚠️ Supabase environment variables are missing. App may not function correctly.");
+        }
+        
+        // Verify database connection
+        console.log("🔌 Verifying database connection");
+        const connectionStatus = await verifySupabaseConnection();
+        setDbStatus({
+          connected: connectionStatus.connected,
+          error: connectionStatus.error
+        });
+        
+        if (!connectionStatus.connected) {
+          console.warn("⚠️ Database connection issue:", connectionStatus.error);
+          // We'll continue even if DB connection fails, but log the issue
+        }
+        
+        // Add any other initialization logic here
+        console.log("✅ App initialization checks completed");
+        
+        // App is ready to render
+        setAppReady(true);
+      } catch (error) {
+        console.error("❌ Failed to initialize app:", error);
+        setInitError(error instanceof Error ? error : new Error("Failed to initialize application"));
+      }
+    };
+
+    initializeApp();
+    
+    return () => {
+      console.log("🧹 App component cleanup");
+    };
+  }, []);
+
+  // Log render state
+  useEffect(() => {
+    console.log("📊 App render state:", { 
+      appReady, 
+      hasError: !!initError,
+      dbConnected: dbStatus?.connected
+    });
+  }, [appReady, initError, dbStatus]);
+
+  // Show loading state while initializing
+  if (!appReady && !initError) {
+    console.log("⏳ App showing loading state");
+    return <LoadingFallback />;
+  }
+
+  // Show error if initialization failed
+  if (initError) {
+    console.error("❌ App showing error state:", initError.message);
+    return <ErrorFallback error={initError} />;
+  }
+
+  // Show warning if database connection failed but continue rendering
+  if (dbStatus && !dbStatus.connected) {
+    console.warn("⚠️ Continuing with app render despite database connection issues");
+  }
+
+  console.log("🖌️ Rendering main App component tree");
+  
+  return (
+    <ErrorBoundary>
+      <ThemeProvider defaultTheme="system">
+        <ToastProvider>
+          <BrowserRouter>
+            <div className="app-container min-h-screen bg-background text-foreground">
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<Index />} />
+                  <Route path="/not-found" element={<NotFound />} />
+                  <Route path="*" element={<Navigate to="/not-found" replace />} />
+                </Routes>
+              </Suspense>
+              
+              {/* Database connection warning */}
+              {dbStatus && !dbStatus.connected && (
+                <div className="fixed bottom-4 left-4 right-4 bg-yellow-100 dark:bg-yellow-900/70 text-yellow-800 dark:text-yellow-200 p-3 rounded-md text-sm border border-yellow-200 dark:border-yellow-800">
+                  <strong>Warning:</strong> Database connection issue. Some features may not work correctly.
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="ml-2 underline"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+            </div>
+          </BrowserRouter>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;
