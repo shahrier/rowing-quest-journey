@@ -98,7 +98,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       // Check if the role is valid
       if (!data || !data.role) {
-        console.error("No role found for user:", userId);
+        console.log("No role found for user:", userId);
         setIsAdmin(false);
         setIsTeamManager(false);
         setLoading(false);
@@ -164,6 +164,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       });
 
       if (authError) {
+        console.error("Auth error:", authError);
         toast({
           title: "Sign up failed",
           description: authError.message,
@@ -173,6 +174,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
 
       if (!authData.user) {
+        console.error("User creation failed");
         toast({
           title: "Sign up failed",
           description: "User creation failed",
@@ -207,7 +209,6 @@ export default function AuthProvider({ children }: AuthProviderProps) {
             description: teamError.message,
             variant: "destructive",
           });
-          // Continue with user creation even if team creation fails
         } else {
           teamId = teamData.id;
         }

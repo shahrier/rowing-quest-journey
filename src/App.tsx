@@ -18,6 +18,7 @@ import TeamPage from "./pages/TeamPage";
 import AchievementsPage from "./pages/AchievementsPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
+import TroubleshootingPage from "./pages/TroubleshootingPage";
 import { Layout } from "./components/layout/Layout";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -90,6 +91,12 @@ const App = () => (
                 path="/settings"
                 element={<SettingsPage data-oid="aaeh_bh" />}
                 data-oid="36r-8r4"
+              />
+
+              <Route
+                path="/troubleshooting"
+                element={<TroubleshootingPage data-oid="troubleshooting" />}
+                data-oid="troubleshooting"
               />
 
               <Route
