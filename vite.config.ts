@@ -1,44 +1,45 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
+// Log configuration
+console.log("📋 Loading Vite configuration");
+console.log("📊 Node environment:", process.env.NODE_ENV);
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [
-    react({
-      // Configure SWC to properly handle TypeScript and JSX
-      tsDecorators: true,
-      plugins: []
-    }),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  server: {
+    // Log server startup
+    hmr: {
+      overlay: true,
     },
   },
   build: {
-    outDir: "dist",
+    sourcemap: true,
     rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: [
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-tooltip'
-          ]
-        }
-      }
-    }
-  }
-}));
+      onwarn(warning, warn) {
+        // Log build warnings
+        console.log("⚠️ Build warning:", warning);
+        warn(warning);
+      },
+    },
+  },
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@supabase/supabase-js',
+    ],
+  },
+  define: {
+    // Ensure React is properly defined
+    'process.env': {},
+  },
+});
