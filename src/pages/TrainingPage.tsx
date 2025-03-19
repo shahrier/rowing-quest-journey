@@ -1,5 +1,5 @@
-import { ActivityLogger } from '@/components/activities/ActivityLogger';
-import { BadgeGrid } from '@/components/badges/BadgeGrid';
+import { ActivityLogger } from "@/components/activities/ActivityLogger";
+import { BadgeGrid } from "@/components/badges/BadgeGrid";
 
 export default function TrainingPage() {
   return (
@@ -10,12 +10,12 @@ export default function TrainingPage() {
           Log your rowing and strength training activities
         </p>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-2">
         <div className="md:col-span-2">
           <ActivityLogger />
         </div>
-        
+
         <div className="md:col-span-2">
           <BadgeGrid />
         </div>

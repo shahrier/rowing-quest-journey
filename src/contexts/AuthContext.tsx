@@ -1,7 +1,13 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useToast } from '@/hooks/use-toast';
-import { Session, User } from '@supabase/supabase-js';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { supabase } from "@/lib/supabase";
+import { useToast } from "@/hooks/use-toast";
+import { Session, User } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: User | null;
@@ -10,7 +16,12 @@ interface AuthContextType {
   isTeamManager: boolean;
   teamId: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, teamName?: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    teamName?: string,
+  ) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithFacebook: () => Promise<void>;
@@ -22,7 +33,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
@@ -51,7 +62,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -70,13 +83,13 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     try {
       // Fetch user role from user_roles
       const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
         .single();
 
       if (error) {
-        console.error('Error fetching user role:', error);
+        console.error("Error fetching user role:", error);
         setIsAdmin(false);
         setIsTeamManager(false);
         setLoading(false);
@@ -85,7 +98,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       // Check if the role is valid
       if (!data || !data.role) {
-        console.error('No role found for user:', userId);
+        console.error("No role found for user:", userId);
         setIsAdmin(false);
         setIsTeamManager(false);
         setLoading(false);
@@ -93,14 +106,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Set admin and team manager status
-      const isAdmin = ['admin', 'team_manager'].includes(data.role);
+      const isAdmin = ["admin", "team_manager"].includes(data.role);
       setIsAdmin(isAdmin);
-      setIsTeamManager(data.role === 'team_manager');
-      console.log('User role:', data.role, 'Is Admin:', isAdmin);
+      setIsTeamManager(data.role === "team_manager");
+      console.log("User role:", data.role, "Is Admin:", isAdmin);
 
       setLoading(false);
     } catch (error) {
-      console.error('Error in fetchUserRole:', error);
+      console.error("Error in fetchUserRole:", error);
       setIsAdmin(false);
       setIsTeamManager(false);
       setLoading(false);
@@ -116,28 +129,33 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         toast({
-          title: 'Sign in failed',
+          title: "Sign in failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: 'Signed in successfully',
-        description: 'Welcome back!',
+        title: "Signed in successfully",
+        description: "Welcome back!",
       });
     } catch (error) {
-      console.error('Error signing in:', error);
+      console.error("Error signing in:", error);
       toast({
-        title: 'Sign in failed',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Sign in failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, teamName?: string) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    teamName?: string,
+  ) => {
     try {
       // Create the user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -147,47 +165,47 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       if (authError) {
         toast({
-          title: 'Sign up failed',
+          title: "Sign up failed",
           description: authError.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
         return;
       }
 
       if (!authData.user) {
         toast({
-          title: 'Sign up failed',
-          description: 'User creation failed',
-          variant: 'destructive',
+          title: "Sign up failed",
+          description: "User creation failed",
+          variant: "destructive",
         });
         return;
       }
 
       // Determine if user is creating a team (will be team manager)
-      const role = teamName ? 'team_manager' : 'user';
+      const role = teamName ? "team_manager" : "user";
       let teamId = null;
 
       // If creating a team, create the team first
       if (teamName) {
         const { data: teamData, error: teamError } = await supabase
-          .from('teams')
+          .from("teams")
           .insert({
             name: teamName,
             created_by: authData.user.id,
-            journey_name: 'Boston to Rotterdam',
-            start_location: 'Boston',
-            end_location: 'Rotterdam',
+            journey_name: "Boston to Rotterdam",
+            start_location: "Boston",
+            end_location: "Rotterdam",
             total_distance_km: 5556,
           })
           .select()
           .single();
 
         if (teamError) {
-          console.error('Error creating team:', teamError);
+          console.error("Error creating team:", teamError);
           toast({
-            title: 'Team creation failed',
+            title: "Team creation failed",
             description: teamError.message,
-            variant: 'destructive',
+            variant: "destructive",
           });
           // Continue with user creation even if team creation fails
         } else {
@@ -196,39 +214,37 @@ export default function AuthProvider({ children }: AuthProviderProps) {
       }
 
       // Create user profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          user_id: authData.user.id,
-          full_name: fullName,
-          email: email,
-          role: role,
-          team_id: teamId,
-        });
+      const { error: profileError } = await supabase.from("profiles").insert({
+        id: authData.user.id,
+        user_id: authData.user.id,
+        full_name: fullName,
+        email: email,
+        role: role,
+        team_id: teamId,
+      });
 
       if (profileError) {
-        console.error('Error creating profile:', profileError);
+        console.error("Error creating profile:", profileError);
         toast({
-          title: 'Profile creation failed',
+          title: "Profile creation failed",
           description: profileError.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
         return;
       }
 
       toast({
-        title: 'Account created successfully',
-        description: teamName 
-          ? `Your team "${teamName}" has been created and you are the team manager.` 
-          : 'Your account has been created. You can now join a team.',
+        title: "Account created successfully",
+        description: teamName
+          ? `Your team "${teamName}" has been created and you are the team manager.`
+          : "Your account has been created. You can now join a team.",
       });
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error("Error signing up:", error);
       toast({
-        title: 'Sign up failed',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Sign up failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
@@ -237,14 +253,14 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     try {
       await supabase.auth.signOut();
       toast({
-        title: 'Signed out successfully',
+        title: "Signed out successfully",
       });
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       toast({
-        title: 'Sign out failed',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Sign out failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
@@ -252,7 +268,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const signInWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -260,17 +276,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         toast({
-          title: 'Google sign in failed',
+          title: "Google sign in failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.error("Error signing in with Google:", error);
       toast({
-        title: 'Google sign in failed',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Google sign in failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
@@ -278,7 +294,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const signInWithFacebook = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
+        provider: "facebook",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -286,17 +302,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         toast({
-          title: 'Facebook sign in failed',
+          title: "Facebook sign in failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error signing in with Facebook:', error);
+      console.error("Error signing in with Facebook:", error);
       toast({
-        title: 'Facebook sign in failed',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Facebook sign in failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
@@ -304,7 +320,7 @@ export default function AuthProvider({ children }: AuthProviderProps) {
   const signInWithTwitter = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'twitter',
+        provider: "twitter",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -312,17 +328,17 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
       if (error) {
         toast({
-          title: 'Twitter sign in failed',
+          title: "Twitter sign in failed",
           description: error.message,
-          variant: 'destructive',
+          variant: "destructive",
         });
       }
     } catch (error) {
-      console.error('Error signing in with Twitter:', error);
+      console.error("Error signing in with Twitter:", error);
       toast({
-        title: 'Twitter sign in failed',
-        description: 'An unexpected error occurred',
-        variant: 'destructive',
+        title: "Twitter sign in failed",
+        description: "An unexpected error occurred",
+        variant: "destructive",
       });
     }
   };
@@ -341,5 +357,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
     signInWithTwitter,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value} data-oid="hrrif87">
+      {children}
+    </AuthContext.Provider>
+  );
 }

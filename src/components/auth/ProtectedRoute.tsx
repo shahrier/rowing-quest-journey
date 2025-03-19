@@ -1,33 +1,43 @@
-import { ReactNode } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/hooks/use-auth';
+import { ReactNode } from "react";
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole?: 'admin' | 'team_manager';
+  requiredRole?: "admin" | "team_manager";
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  requiredRole,
+}: ProtectedRouteProps) {
   const { user, isAdmin, isTeamManager } = useAuth();
   const location = useLocation();
 
   if (!user) {
-    console.log('ProtectedRoute:', { isAdmin, isTeamManager, requiredRole });
+    console.log("ProtectedRoute:", { isAdmin, isTeamManager, requiredRole });
     // Redirect to login if not authenticated
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+        data-oid="ma2-nkl"
+      />
+    );
   }
 
   // Check for required role
-  if (requiredRole === 'admin' && !isAdmin) {
-    console.log('ProtectedRoute:', { isAdmin, isTeamManager, requiredRole });
+  if (requiredRole === "admin" && !isAdmin) {
+    console.log("ProtectedRoute:", { isAdmin, isTeamManager, requiredRole });
     // Redirect to home if admin role is required but user is not admin
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace data-oid="m-w4767" />;
   }
 
-  if (requiredRole === 'team_manager' && !(isTeamManager || isAdmin)) {
-    console.log('ProtectedRoute:', { isAdmin, isTeamManager, requiredRole });
+  if (requiredRole === "team_manager" && !(isTeamManager || isAdmin)) {
+    console.log("ProtectedRoute:", { isAdmin, isTeamManager, requiredRole });
     // Redirect to home if team manager role is required but user is neither team manager nor admin
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace data-oid="xfprpng" />;
   }
 
   return <>{children}</>;

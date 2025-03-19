@@ -1,6 +1,12 @@
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
@@ -15,7 +21,7 @@ export function LogDistanceForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!distance || isNaN(Number(distance)) || Number(distance) <= 0) {
       toast({
         title: "Invalid distance",
@@ -24,16 +30,16 @@ export function LogDistanceForm() {
       });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     // Simulate API call
     setTimeout(() => {
       toast({
         title: "Distance logged successfully!",
         description: `You've added ${distance} m to your journey.`,
       });
-      
+
       setDistance("");
       setNotes("");
       setIsSubmitting(false);
@@ -41,15 +47,23 @@ export function LogDistanceForm() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Log Your Distance</CardTitle>
-        <CardDescription>Record your rowing progress</CardDescription>
+    <Card data-oid="z0sz9.t">
+      <CardHeader data-oid="ta_1kyu">
+        <CardTitle className="text-lg" data-oid="b6i057k">
+          Log Your Distance
+        </CardTitle>
+        <CardDescription data-oid="f79lz6f">
+          Record your rowing progress
+        </CardDescription>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="distance" className="text-sm font-medium">
+      <form onSubmit={handleSubmit} data-oid="i106bd7">
+        <CardContent className="space-y-4" data-oid="wesvb9l">
+          <div className="space-y-1" data-oid="24zuyz_">
+            <label
+              htmlFor="distance"
+              className="text-sm font-medium"
+              data-oid="6pzuhmq"
+            >
               Distance (m)
             </label>
             <Input
@@ -61,11 +75,16 @@ export function LogDistanceForm() {
               value={distance}
               onChange={(e) => setDistance(e.target.value)}
               required
+              data-oid="m:0h8mp"
             />
           </div>
-          
-          <div className="space-y-1">
-            <label htmlFor="notes" className="text-sm font-medium">
+
+          <div className="space-y-1" data-oid="e8__g0t">
+            <label
+              htmlFor="notes"
+              className="text-sm font-medium"
+              data-oid="xthq--:"
+            >
               Notes (optional)
             </label>
             <Textarea
@@ -75,14 +94,16 @@ export function LogDistanceForm() {
               onChange={(e) => setNotes(e.target.value)}
               className="resize-none"
               rows={3}
+              data-oid="nve.9uh"
             />
           </div>
         </CardContent>
-        <CardFooter>
-          <Button 
-            type="submit" 
+        <CardFooter data-oid="rlqz:zr">
+          <Button
+            type="submit"
             className={cn("w-full", isSubmitting && "opacity-80")}
             disabled={isSubmitting}
+            data-oid="8:eo.-v"
           >
             {isSubmitting ? "Logging..." : "Log Distance"}
           </Button>

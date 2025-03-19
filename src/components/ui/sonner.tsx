@@ -1,4 +1,3 @@
-
 import { useTheme } from "@/providers/ThemeProvider";
 import { Toaster as Sonner } from "sonner";
 
@@ -6,7 +5,7 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme = "system" } = useTheme();
-  
+
   return (
     <Sonner
       theme={theme as ToasterProps["theme"]}
@@ -23,6 +22,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         },
       }}
       {...props}
+      data-oid="ckcmo6-"
     />
   );
 };
