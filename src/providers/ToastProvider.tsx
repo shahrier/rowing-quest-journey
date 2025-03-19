@@ -1,9 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, createContext, useContext, useState, ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
+export function ToastProvider({ children }: { children: ReactNode }) {
   console.log("🔔 ToastProvider rendering");
   
+  const [toasts, setToasts] = useState([]);
+
   useEffect(() => {
     console.log("✅ ToastProvider mounted");
     

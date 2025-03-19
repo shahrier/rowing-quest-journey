@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
+import { useState, useEffect } from 'react';
 
 // Get environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Log Supabase configuration (without exposing full keys)
 console.log("🔌 Supabase configuration:", {
@@ -18,64 +19,80 @@ if (!supabaseUrl || !supabaseAnonKey) {
     urlMissing: !supabaseUrl,
     keyMissing: !supabaseAnonKey
   });
+  throw new Error('Missing Supabase environment variables');
 }
 
-// Create Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create client with retries
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+  global: {
+    headers: { 'x-application-name': 'your-app-name' },
+  },
+  db: {
+    schema: 'public',
+  },
+});
 
-// Verify connection
-export const verifySupabaseConnection = async () => {
-  console.log("🔍 Verifying Supabase connection...");
-  
+// Simple health check function
+export async function checkHealth() {
   try {
-    // Simple query to check connection
-    const start = performance.now();
-    const { data, error, status } = await supabase
-      .from('profiles')
-      .select('count', { count: 'exact', head: true });
-    
-    const duration = performance.now() - start;
-    
-    if (error) {
-      console.error("❌ Supabase connection failed:", {
-        error: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-        status
-      });
-      return {
-        connected: false,
-        error: error.message,
-        status,
-        duration
-      };
+    // Try auth first
+    const { data: authData, error: authError } = await supabase.auth.getSession();
+    if (authError) {
+      console.error('Auth check failed:', authError);
+      return false;
     }
-    
-    console.log("✅ Supabase connection successful:", {
-      status,
-      duration: `${duration.toFixed(2)}ms`,
-      data
-    });
-    
-    return {
-      connected: true,
-      status,
-      duration,
-      data
-    };
-  } catch (error) {
-    console.error("❌ Supabase connection error:", error);
-    return {
-      connected: false,
-      error: error instanceof Error ? error.message : String(error),
-      duration: 0
-    };
-  }
-};
 
-// Automatically verify connection in development mode
-if (import.meta.env.DEV) {
-  console.log("🔄 Scheduling Supabase connection verification");
-  setTimeout(verifySupabaseConnection, 1000);
+    // Call the check_connection function to verify the database connection
+    const { data, error: dbError } = await supabase.rpc('check_connection');
+
+    if (dbError) {
+      console.error('Database check failed:', dbError);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Health check failed:', error);
+    return false;
+  }
+}
+
+// Connection status hook with retry logic
+export function useDatabase() {
+  const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking');
+  const [error, setError] = useState<string | null>(null);
+
+  const checkConnection = async () => {
+    try {
+      setStatus('checking');
+      setError(null);
+
+      const isHealthy = await checkHealth();
+      
+      if (isHealthy) {
+        setStatus('connected');
+      } else {
+        setStatus('error');
+        setError('Database connection failed');
+      }
+    } catch (err) {
+      setStatus('error');
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    }
+  };
+
+  useEffect(() => {
+    checkConnection();
+  }, []);
+
+  return {
+    status,
+    error,
+    retry: checkConnection,
+    isConnected: status === 'connected',
+  };
 }

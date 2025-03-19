@@ -1,15 +1,18 @@
-import React, { createContext, useState, useEffect, useContext } from "react";
+import React, { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { Session, User } from "@supabase/supabase-js";
 
-interface AuthContextType {
+interface AuthState {
   user: User | null;
   session: Session | null;
   isAdmin: boolean;
   isTeamManager: boolean;
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+}
+
+interface AuthContextType extends AuthState {
+  signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -20,57 +23,47 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-};
-
-const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isTeamManager, setIsTeamManager] = useState(false);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    session: null,
+    isAdmin: false,
+    isTeamManager: false,
+    isLoading: true,
+  });
   const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setIsLoading(false);
+    // Check current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setState(prev => ({
+        ...prev,
+        user: session?.user ?? null,
+        session: session,
+        loading: false,
+      }));
 
-        if (session?.user) {
-          await checkUserRole(session.user.id);
-        }
+      if (session?.user) {
+        checkUserRole(session.user.id);
       }
-    );
+    });
 
-    // Get initial session
-    const initializeAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setState(prev => ({
+        ...prev,
+        user: session?.user ?? null,
+        session: session,
+        loading: false,
+      }));
 
-        if (data.session?.user) {
-          await checkUserRole(data.session.user.id);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setIsLoading(false);
+      if (session?.user) {
+        checkUserRole(session.user.id);
       }
-    };
-
-    initializeAuth();
+    });
 
     return () => {
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -84,142 +77,139 @@ const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
       if (error) {
         console.error("Error fetching user role:", error);
-        setIsAdmin(false);
-        setIsTeamManager(false);
+        setState(prev => ({
+          ...prev,
+          isAdmin: false,
+          isTeamManager: false,
+        }));
         return;
       }
 
-      setIsAdmin(data.role === "admin");
-      setIsTeamManager(data.role === "team_manager");
+      setState(prev => ({
+        ...prev,
+        isAdmin: data.role === "admin",
+        isTeamManager: data.role === "team_manager",
+      }));
     } catch (error) {
       console.error("Error checking user role:", error);
-      setIsAdmin(false);
-      setIsTeamManager(false);
+      setState(prev => ({
+        ...prev,
+        isAdmin: false,
+        isTeamManager: false,
+      }));
     }
   };
 
   const refreshProfile = async () => {
-    if (user) {
-      await checkUserRole(user.id);
+    if (state.user) {
+      await checkUserRole(state.user.id);
     }
-  };
-
-  const signIn = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true };
-    } catch (error: any) {
-      console.error("Sign in error:", error);
-      return { success: false, error: error.message || "An unexpected error occurred" };
-    }
-  };
-
-  const signUp = async (email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string; userId?: string }> => {
-    try {
-      // Sign up the user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-          },
-        },
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (!data.user) {
-        return { success: false, error: "User creation failed" };
-      }
-
-      // Create a profile for the user
-      const { error: profileError } = await supabase.from("profiles").insert({
-        user_id: data.user.id,
-        email: email,
-        full_name: fullName,
-        role: "user",
-        created_at: new Date().toISOString(),
-      });
-
-      if (profileError) {
-        console.error("Error creating profile:", profileError);
-        return { success: true, userId: data.user.id, error: "Account created but profile setup failed. Please contact support." };
-      }
-
-      return { success: true, userId: data.user.id };
-    } catch (error: any) {
-      console.error("Sign up error:", error);
-      return { success: false, error: error.message || "An unexpected error occurred" };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  };
-
-  const signInWithFacebook = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "facebook",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  };
-
-  const signInWithTwitter = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: "twitter",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
   };
 
   const value = {
-    user,
-    session,
-    isAdmin,
-    isTeamManager,
-    isLoading,
-    signIn,
-    signUp,
-    signOut,
-    signInWithGoogle,
-    signInWithFacebook,
-    signInWithTwitter,
+    ...state,
+    signIn: async (email: string, password: string) => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+    },
+    signUp: async (email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string; userId?: string }> => {
+      try {
+        // Sign up the user
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+            },
+          },
+        });
+
+        if (error) {
+          return { success: false, error: error.message };
+        }
+
+        if (!data.user) {
+          return { success: false, error: "User creation failed" };
+        }
+
+        // Create a profile for the user
+        const { error: profileError } = await supabase.from("profiles").insert({
+          user_id: data.user.id,
+          email: email,
+          full_name: fullName,
+          role: "user",
+          created_at: new Date().toISOString(),
+        });
+
+        if (profileError) {
+          console.error("Error creating profile:", profileError);
+          return { success: true, userId: data.user.id, error: "Account created but profile setup failed. Please contact support." };
+        }
+
+        return { success: true, userId: data.user.id };
+      } catch (error: any) {
+        console.error("Sign up error:", error);
+        return { success: false, error: error.message || "An unexpected error occurred" };
+      }
+    },
+    signOut: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Sign out error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to sign out",
+          variant: "destructive",
+        });
+      }
+    },
+    signInWithGoogle: async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+    },
+    signInWithFacebook: async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+    },
+    signInWithTwitter: async () => {
+      await supabase.auth.signInWithOAuth({
+        provider: "twitter",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+    },
     refreshProfile,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  // Show loading state
+  if (state.loading) {
+    return <div>Loading auth...</div>;
+  }
 
-export default AuthProvider;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}

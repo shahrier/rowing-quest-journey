@@ -1,7 +1,7 @@
 /**
  * Utility functions for application diagnostics and troubleshooting
  */
-import { supabase, verifySupabaseConnection } from './supabase';
+import { supabase } from './supabase';
 
 // Check if the DOM is properly initialized
 export function checkDOMStatus() {
@@ -490,4 +490,49 @@ export function initDiagnostics() {
   };
   
   console.log("✅ Diagnostics initialized. Access via window.__diagnostics in console.");
+}
+
+export async function logDiagnostics() {
+  return {
+    react: checkReactRendering(),
+    database: await checkDatabaseStatus(),
+  };
+}
+
+async function checkDatabaseStatus() {
+  try {
+    // Try a simple query to verify connection
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id')
+      .limit(1);
+
+    return {
+      status: error ? 'error' : 'connected',
+      error: error ? error.message : null,
+      timestamp: new Date().toISOString(),
+    };
+  } catch (error) {
+    return {
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown database error',
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+
+async function verifySupabaseConnection() {
+  try {
+    const { data, error } = await supabase.rpc('rpc_function_name'); // Example of a function call without a specific table
+    return {
+      connected: !error,
+      data,
+      error,
+    };
+  } catch (error) {
+    return {
+      connected: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

@@ -5,6 +5,7 @@ import "./index.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Debug } from "./components/Debug";
 import { initDiagnostics, runDiagnostics } from "./lib/diagnostics";
+import { logDiagnostics } from './utils/systemDiagnostics';
 
 // Enable debug mode in development or when URL has debug parameter
 const isDebugMode = 
@@ -66,11 +67,10 @@ function initializeApp() {
     // Log initialization
     console.log(`🏁 Initializing RowQuest app (${import.meta.env.MODE} mode)`);
     
-    // Create root and render app
-    console.log("🌱 Creating React root");
+    // Create root before rendering
     const root = ReactDOM.createRoot(rootElement);
     
-    console.log("🖌️ Rendering React application");
+    // Wrap rendering in error boundary
     root.render(
       <React.StrictMode>
         <ErrorBoundary>
@@ -82,7 +82,12 @@ function initializeApp() {
       </React.StrictMode>
     );
     
-    console.log("✅ App render method called successfully");
+    // Log diagnostics after render using Promise
+    logDiagnostics().then(diagnostics => {
+      console.log('Initial diagnostics:', diagnostics);
+    }).catch(error => {
+      console.error('Diagnostics error:', error);
+    });
     
     // Run diagnostics after render
     if (isDebugMode) {
@@ -109,35 +114,15 @@ function initializeApp() {
       });
     }
     
-    // Fallback rendering if React fails to initialize
-    if (rootElement) {
-      rootElement.innerHTML = `
-        <div style="padding: 20px; text-align: center;">
-          <h2 style="color: #e11d48;">Application Error</h2>
-          <p>We encountered a problem while starting the application.</p>
-          <p style="font-family: monospace; margin: 20px 0; padding: 10px; background: #f8f9fa; text-align: left; overflow: auto;">
-            ${error instanceof Error ? error.message : String(error)}
-          </p>
-          <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
-            <button onclick="window.location.reload()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              Reload Application
-            </button>
-            <button onclick="window.location.href = window.location.href + (window.location.href.includes('?') ? '&' : '?') + 'debug=true'" style="padding: 8px 16px; background: #4b5563; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              Launch Debug Mode
-            </button>
-          </div>
-          <div style="margin-top: 20px; text-align: left; background: #f8f9fa; padding: 10px; border-radius: 4px;">
-            <h3 style="margin-top: 0;">Technical Information</h3>
-            <p style="font-family: monospace; font-size: 12px;">
-              Time: ${new Date().toISOString()}<br>
-              URL: ${window.location.href}<br>
-              User Agent: ${navigator.userAgent}<br>
-              ${error instanceof Error ? `Stack: ${error.stack}` : ''}
-            </p>
-          </div>
+    // Render error fallback
+    root.render(
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center p-4">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Failed to start application</h1>
+          <p className="text-gray-600 mb-4">Please try refreshing the page</p>
         </div>
-      `;
-    }
+      </div>
+    );
   }
 }
 

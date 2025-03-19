@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
 export default function Login() {
@@ -53,14 +53,7 @@ export default function Login() {
 
     setIsSubmitting(true);
     try {
-      const result = await signIn(loginEmail, loginPassword);
-      if (!result.success) {
-        toast({
-          title: "Login failed",
-          description: result.error || "Invalid email or password",
-          variant: "destructive",
-        });
-      }
+      await signIn(loginEmail, loginPassword);
     } catch (error) {
       console.error("Login error:", error);
       toast({
