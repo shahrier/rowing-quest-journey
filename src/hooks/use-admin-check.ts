@@ -3,15 +3,18 @@ import { useAuth } from './use-auth';
 import { supabase } from '@/lib/supabase';
 import { useToast } from './use-toast';
 
+// This should ideally come from an environment variable or a secure configuration
+const ADMIN_EMAILS = ['shahrier@gmail.com']; // In production, this should be configured elsewhere
+
 export function useAdminCheck() {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
     const checkAdminStatus = async () => {
-      if (user && user.email === 'shahrier@gmail.com' && !isAdmin) {
+      if (user && ADMIN_EMAILS.includes(user.email || '') && !isAdmin) {
         try {
-          console.log('Checking admin status for shahrier@gmail.com');
+          console.log(`Checking admin status for ${user.email}`);
           
           // First check if profile exists
           const { data: profileData, error: profileError } = await supabase
@@ -31,10 +34,11 @@ export function useAdminCheck() {
               .from('profiles')
               .insert({
                 user_id: user.id,
-                email: user.email,
-                full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+                email: user.email || '',
+                full_name: user.user_metadata?.full_name || (user.email?.split('@')[0] || 'User'),
                 role: 'admin',
-                created_at: new Date().toISOString()
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               });
 
             if (insertError) {

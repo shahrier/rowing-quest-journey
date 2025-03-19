@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS user_badges CASCADE;
 DROP TABLE IF EXISTS media CASCADE;
 DROP TABLE IF EXISTS activities CASCADE;
 DROP TABLE IF EXISTS badges CASCADE;
+DROP TABLE IF EXISTS journey_checkpoints CASCADE;
 DROP TABLE IF EXISTS profiles CASCADE;
 DROP TABLE IF EXISTS teams CASCADE;
 
@@ -20,11 +21,12 @@ DROP TABLE IF EXISTS teams CASCADE;
 CREATE TABLE teams (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
+    created_by UUID REFERENCES auth.users(id) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+    description TEXT,
     goal_distance BIGINT,
-    current_distance BIGINT DEFAULT 0,
-    description TEXT
+    current_distance BIGINT DEFAULT 0
 );
 
 CREATE TABLE profiles (
@@ -39,13 +41,25 @@ CREATE TABLE profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
+CREATE TABLE journey_checkpoints (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id UUID REFERENCES teams(id) NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    distance_from_start BIGINT NOT NULL,
+    latitude FLOAT NOT NULL,
+    longitude FLOAT NOT NULL,
+    is_reached BOOLEAN DEFAULT FALSE,
+    reached_at TIMESTAMP WITH TIME ZONE
+);
+
 CREATE TABLE activities (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) NOT NULL,
     team_id UUID REFERENCES teams(id) NOT NULL,
     activity_type TEXT CHECK (activity_type IN ('rowing', 'strength')) NOT NULL,
     distance INTEGER,
-    duration INTEGER NOT NULL,
+    duration INTEGER,
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -63,18 +77,19 @@ CREATE TABLE badges (
 );
 
 CREATE TABLE user_badges (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) NOT NULL,
     badge_id UUID REFERENCES badges(id) NOT NULL,
     earned_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-    PRIMARY KEY (user_id, badge_id)
+    UNIQUE(user_id, badge_id)
 );
 
 CREATE TABLE media (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) NOT NULL,
     team_id UUID REFERENCES teams(id) NOT NULL,
-    media_type TEXT CHECK (media_type IN ('photo', 'video')) NOT NULL,
     url TEXT NOT NULL,
+    type TEXT CHECK (type IN ('photo', 'video')) NOT NULL,
     caption TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -86,6 +101,7 @@ ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE media ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journey_checkpoints ENABLE ROW LEVEL SECURITY;
 
 -- Create functions
 CREATE OR REPLACE FUNCTION check_badge_requirements()
@@ -173,8 +189,12 @@ BEGIN
     -- Media policies
     EXECUTE format('CREATE POLICY "Media visible to team members" ON media FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND team_id = media.team_id))');
     EXECUTE format('CREATE POLICY "Users can upload their own media" ON media FOR INSERT WITH CHECK (auth.uid() = user_id)');
+    
+    -- Journey checkpoints policies
+    EXECUTE format('CREATE POLICY "Journey checkpoints visible to team members" ON journey_checkpoints FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND team_id = journey_checkpoints.team_id))');
+    EXECUTE format('CREATE POLICY "Team managers can manage journey checkpoints" ON journey_checkpoints FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE user_id = auth.uid() AND team_id = journey_checkpoints.team_id AND role IN (''team_manager'', ''admin'')))');
 EXCEPTION WHEN OTHERS THEN
     RAISE NOTICE 'Error creating policies: %', SQLERRM;
 END $$;
 
-COMMIT; 
+COMMIT;
