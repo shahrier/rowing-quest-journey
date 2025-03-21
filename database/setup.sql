@@ -1,9 +1,6 @@
 -- This SQL script sets up the database schema for the Rowing Quest Journey app
 -- Run this in your Supabase SQL editor to create all required tables
 
--- Enable RLS (Row Level Security)
-ALTER DATABASE postgres SET "app.settings.jwt_secret" TO 'your-jwt-secret';
-
 -- Create enums
 CREATE TYPE app_role AS ENUM ('admin', 'user', 'team_manager');
 CREATE TYPE badge_tier AS ENUM ('bronze', 'silver', 'gold');
