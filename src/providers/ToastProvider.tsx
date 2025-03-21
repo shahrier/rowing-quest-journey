@@ -1,30 +1,70 @@
-import React, { useEffect, createContext, useContext, useState, ReactNode } from "react";
-import { Toaster } from "@/components/ui/toaster";
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+}
+
+interface ToastContextType {
+  toasts: Toast[];
+  showToast: (message: string, type: Toast['type']) => void;
+  hideToast: (id: string) => void;
+}
+
+const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  console.log("🔔 ToastProvider rendering");
-  
-  const [toasts, setToasts] = useState([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
-  useEffect(() => {
-    console.log("✅ ToastProvider mounted");
+  const showToast = (message: string, type: Toast['type'] = 'info') => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
     
-    // Check if Toaster component is properly defined
-    if (typeof Toaster !== 'function') {
-      console.error("❌ Toaster component is not properly defined:", Toaster);
-    } else {
-      console.log("✅ Toaster component is properly defined");
-    }
-    
-    return () => {
-      console.log("🧹 ToastProvider cleanup");
-    };
-  }, []);
-  
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+      hideToast(id);
+    }, 5000);
+  };
+
+  const hideToast = (id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  };
+
   return (
-    <div className="toast-provider-wrapper relative" data-testid="toast-provider">
+    <ToastContext.Provider value={{ toasts, showToast, hideToast }}>
       {children}
-      <Toaster />
-    </div>
+      
+      {/* Toast container */}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`p-3 rounded shadow-lg flex justify-between items-center ${
+              toast.type === 'success' ? 'bg-green-500 text-white' :
+              toast.type === 'error' ? 'bg-red-500 text-white' :
+              toast.type === 'warning' ? 'bg-yellow-500 text-white' :
+              'bg-blue-500 text-white'
+            }`}
+          >
+            <span>{toast.message}</span>
+            <button
+              onClick={() => hideToast(toast.id)}
+              className="ml-4 text-white hover:text-gray-200"
+            >
+              &times;
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
   );
+}
+
+export function useToast() {
+  const context = useContext(ToastContext);
+  if (context === undefined) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
 }
