@@ -80,7 +80,7 @@ async function verifyDatabase() {
       return false;
     }
     
-    const existingTables = tablesData.map(t => t.table_name);
+    const existingTables = tablesData?.map(t => t.table_name) || [];
     console.log('📊 Existing tables:', existingTables);
     
     const missingTables = requiredTables.filter(t => !existingTables.includes(t));
@@ -91,20 +91,19 @@ async function verifyDatabase() {
       console.log('✅ All required tables exist');
     }
     
-    // Check functions
+    // Check functions - using a different approach to avoid type casting issues
     console.log('\\n🔧 Checking required functions...');
     const { data: functionsData, error: functionsError } = await supabase
-      .from('information_schema.routines')
-      .select('routine_name')
-      .eq('routine_schema', 'public')
-      .eq('routine_type', 'FUNCTION');
+      .from('pg_catalog.pg_proc')
+      .select('proname')
+      .contains('pronamespace', { schema: 'public' });
     
     if (functionsError) {
       console.error('❌ Failed to fetch functions:', functionsError.message);
       return false;
     }
     
-    const existingFunctions = functionsData.map(f => f.routine_name);
+    const existingFunctions = functionsData?.map(f => f.proname) || [];
     console.log('📊 Existing functions:', existingFunctions);
     
     const missingFunctions = requiredFunctions.filter(f => !existingFunctions.includes(f));
@@ -115,10 +114,10 @@ async function verifyDatabase() {
       console.log('✅ All required functions exist');
     }
     
-    // Check enums
+    // Check enums - using a safer approach
     console.log('\\n🔤 Checking required enums...');
     const { data: enumsData, error: enumsError } = await supabase
-      .from('pg_type')
+      .from('pg_catalog.pg_type')
       .select('typname')
       .eq('typtype', 'e');
     
@@ -127,7 +126,7 @@ async function verifyDatabase() {
       return false;
     }
     
-    const existingEnums = enumsData.map(e => e.typname);
+    const existingEnums = enumsData?.map(e => e.typname) || [];
     console.log('📊 Existing enums:', existingEnums);
     
     const missingEnums = requiredEnums.filter(e => !existingEnums.includes(e));

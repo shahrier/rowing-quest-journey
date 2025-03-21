@@ -138,10 +138,11 @@ export const databaseDiagnostics = {
         'update_team_distance', 'check_badge_requirements'
       ];
       
+      // Fixed the syntax error here - removed the type cast with ::
       const { data, error } = await supabase
         .from('pg_proc')
         .select('proname')
-        .eq('pronamespace', 'public'::regnamespace);
+        .eq('pronamespace', 'public');
       
       if (error) {
         return {
@@ -212,7 +213,8 @@ export const databaseDiagnostics = {
     } catch (error) {
       return {
         status: 'error',
-        message: `Auth check error: ${error instanceof Error ? error.message : String(error)}`,details: { error },
+        message: `Auth check error: ${error instanceof Error ? error.message : String(error)}`,
+        details: { error },
         timestamp: new Date().toISOString()
       };
     }

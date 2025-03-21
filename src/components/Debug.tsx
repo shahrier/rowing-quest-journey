@@ -55,7 +55,7 @@ export function Debug({ onClose }: DebugPanelProps) {
         timestamp: new Date().toISOString()
       });
       
-      // Collect JS errors
+      // Collect JS errors - safely handle potential undefined
       setJsErrors(window.__diagnostics_errors || []);
     } catch (error) {
       console.error('Error running diagnostics:', error);
@@ -258,7 +258,7 @@ export function Debug({ onClose }: DebugPanelProps) {
                       <div key={index} className="bg-white dark:bg-slate-700 p-2 rounded text-xs">
                         <div className="font-medium text-red-500">{error.message}</div>
                         <div className="text-slate-500 dark:text-slate-400 mt-1">
-                          {error.timestamp} - {error.filename}:{error.lineno}:{error.colno}
+                          {error.timestamp} - {error.filename || 'unknown'}:{error.lineno || '?'}:{error.colno || '?'}
                         </div>
                       </div>
                     ))}

@@ -41,7 +41,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 export async function verifySupabaseConnection(): Promise<boolean> {
   try {
     // Try a simple query that should always work if connected
-    const { data, error } = await supabase.from('profiles').select('count').limit(1);
+    // Using a simple select count query instead of RPC to avoid potential issues
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('count', { count: 'exact', head: true });
     
     if (error) {
       console.error('Supabase connection verification failed:', error);
@@ -66,7 +69,9 @@ export async function checkHealth() {
     }
 
     // Simple query to verify database connection
-    const { data, error: dbError } = await supabase.from('profiles').select('count').limit(1);
+    const { data, error: dbError } = await supabase
+      .from('profiles')
+      .select('count', { count: 'exact', head: true });
 
     if (dbError) {
       console.error('Database check failed:', dbError);
