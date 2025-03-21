@@ -4,8 +4,8 @@ import App from "./App";
 import "./index.css";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Debug } from "./components/Debug";
-import { initDiagnostics, runDiagnostics } from "./lib/diagnostics";
-import { logDiagnostics } from './utils/systemDiagnostics';
+import { errorTracker } from "./utils/errorTracking";
+import { databaseDiagnostics } from "./utils/databaseDiagnostics";
 
 // Enable debug mode in development or when URL has debug parameter
 const isDebugMode = 
@@ -18,6 +18,9 @@ console.log("🚀 Script execution started", {
   mode: import.meta.env.MODE,
   debugMode: isDebugMode
 });
+
+// Initialize error tracking
+errorTracker.init();
 
 // Function to initialize the app with error handling
 function initializeApp() {
@@ -48,12 +51,6 @@ function initializeApp() {
     // Log React version
     console.log("📚 React version:", React.version);
     
-    // Initialize diagnostics
-    if (isDebugMode) {
-      console.log("🛠️ Initializing diagnostics tools");
-      initDiagnostics();
-    }
-    
     // Log environment variables (without exposing sensitive data)
     console.log("🔐 Environment variables check:", {
       supabaseUrlDefined: !!import.meta.env.VITE_SUPABASE_URL,
@@ -74,28 +71,18 @@ function initializeApp() {
     root.render(
       <React.StrictMode>
         <ErrorBoundary>
-          <>
-            <App />
-            {isDebugMode && <Debug />}
-          </>
+          <App />
         </ErrorBoundary>
       </React.StrictMode>
     );
     
-    // Log diagnostics after render using Promise
-    logDiagnostics().then(diagnostics => {
-      console.log('Initial diagnostics:', diagnostics);
-    }).catch(error => {
-      console.error('Diagnostics error:', error);
-    });
-    
     // Run diagnostics after render
     if (isDebugMode) {
       console.log("🔍 Scheduling post-render diagnostics");
-      setTimeout(() => {
+      setTimeout(async () => {
         console.log("🔍 Running post-render diagnostics");
-        const results = runDiagnostics();
-        console.log("📊 Diagnostics results:", results);
+        const results = await databaseDiagnostics.runAll();
+        console.log("📊 Database diagnostics results:", results);
       }, 1000);
     }
     
@@ -112,43 +99,43 @@ function initializeApp() {
         stack: error.stack,
         cause: error.cause
       });
+      
+      // Track the error
+      errorTracker.captureError({
+        message: error.message,
+        stack: error.stack,
+        type: 'error',
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        context: {
+          phase: 'initialization'
+        }
+      });
     }
     
     // Render error fallback
-    root.render(
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center p-4">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Failed to start application</h1>
-          <p className="text-gray-600 mb-4">Please try refreshing the page</p>
+    if (rootElement) {
+      ReactDOM.createRoot(rootElement).render(
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center p-4">
+            <h1 className="text-2xl font-bold text-red-500 mb-4">Failed to start application</h1>
+            <p className="text-gray-600 mb-4">Please try refreshing the page</p>
+            <button 
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+              onClick={() => window.location.reload()}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 }
 
 // Initialize the app
 console.log("⏳ Calling initializeApp function");
 initializeApp();
-
-// Add global error handler for uncaught errors
-window.addEventListener("error", (event) => {
-  console.error("🔥 Global error:", {
-    message: event.message,
-    filename: event.filename,
-    lineno: event.lineno,
-    colno: event.colno,
-    error: event.error,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Add handler for unhandled promise rejections
-window.addEventListener("unhandledrejection", (event) => {
-  console.error("⚠️ Unhandled promise rejection:", {
-    reason: event.reason,
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Log when DOM is fully loaded
 window.addEventListener("DOMContentLoaded", () => {

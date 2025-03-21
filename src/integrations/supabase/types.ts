@@ -9,188 +9,347 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      journeys: {
+      activities: {
         Row: {
-          created_at: string | null
-          distance_km: number
-          end_location: string
           id: string
-          name: string
-          start_location: string
-          team_id: string | null
+          user_id: string
+          team_id: string
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          distance: number | null
+          duration: number | null
+          notes: string | null
+          created_at: string
         }
         Insert: {
-          created_at?: string | null
-          distance_km: number
-          end_location: string
           id?: string
-          name: string
-          start_location: string
-          team_id?: string | null
+          user_id: string
+          team_id: string
+          activity_type: Database["public"]["Enums"]["activity_type"]
+          distance?: number | null
+          duration?: number | null
+          notes?: string | null
+          created_at?: string
         }
         Update: {
-          created_at?: string | null
-          distance_km?: number
-          end_location?: string
           id?: string
-          name?: string
-          start_location?: string
-          team_id?: string | null
+          user_id?: string
+          team_id?: string
+          activity_type?: Database["public"]["Enums"]["activity_type"]
+          distance?: number | null
+          duration?: number | null
+          notes?: string | null
+          created_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "journeys_team_id_fkey"
+            foreignKeyName: "activities_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_team_id_fkey"
             columns: ["team_id"]
-            isOneToOne: true
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      badges: {
+        Row: {
+          id: string
+          name: string
+          description: string
+          requirement_type: string
+          requirement_value: number
+          tier: Database["public"]["Enums"]["badge_tier"]
+          team_id: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description: string
+          requirement_type: string
+          requirement_value: number
+          tier: Database["public"]["Enums"]["badge_tier"]
+          team_id?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string
+          requirement_type?: string
+          requirement_value?: number
+          tier?: Database["public"]["Enums"]["badge_tier"]
+          team_id?: string | null
+          created_by?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "badges_created_by_fkey"
+            columns: ["created_by"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "badges_team_id_fkey"
+            columns: ["team_id"]
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      journey_checkpoints: {
+        Row: {
+          id: string
+          team_id: string
+          name: string
+          description: string | null
+          distance_from_start: number
+          latitude: number
+          longitude: number
+          is_reached: boolean
+          reached_at: string | null
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          name: string
+          description?: string | null
+          distance_from_start: number
+          latitude: number
+          longitude: number
+          is_reached?: boolean
+          reached_at?: string | null
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          name?: string
+          description?: string | null
+          distance_from_start?: number
+          latitude?: number
+          longitude?: number
+          is_reached?: boolean
+          reached_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journey_checkpoints_team_id_fkey"
+            columns: ["team_id"]
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      media: {
+        Row: {
+          id: string
+          user_id: string
+          team_id: string
+          url: string
+          type: Database["public"]["Enums"]["media_type"]
+          caption: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          team_id: string
+          url: string
+          type: Database["public"]["Enums"]["media_type"]
+          caption?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          team_id?: string
+          url?: string
+          type?: Database["public"]["Enums"]["media_type"]
+          caption?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_team_id_fkey"
+            columns: ["team_id"]
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "media_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
         ]
       }
       profiles: {
         Row: {
+          id: string
+          user_id: string
+          full_name: string
+          email: string
           avatar_url: string | null
-          created_at: string | null
-          email: string
-          full_name: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email: string
-          full_name?: string | null
-          id: string
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string
-          full_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      team_memberships: {
-        Row: {
-          id: string
-          joined_at: string | null
-          role: Database["public"]["Enums"]["team_role"]
+          role: Database["public"]["Enums"]["app_role"]
           team_id: string | null
-          user_id: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
-          joined_at?: string | null
-          role?: Database["public"]["Enums"]["team_role"]
+          user_id: string
+          full_name: string
+          email: string
+          avatar_url?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
           team_id?: string | null
-          user_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
-          joined_at?: string | null
-          role?: Database["public"]["Enums"]["team_role"]
+          user_id?: string
+          full_name?: string
+          email?: string
+          avatar_url?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
           team_id?: string | null
-          user_id?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "team_memberships_team_id_fkey"
+            foreignKeyName: "profiles_team_id_fkey"
             columns: ["team_id"]
-            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "team_memberships_user_id_fkey"
+            foreignKeyName: "profiles_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "users"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
       teams: {
         Row: {
-          created_at: string | null
-          created_by: string | null
           id: string
           name: string
+          created_by: string
+          created_at: string
+          updated_at: string
+          description: string | null
+          goal_distance: number | null
+          current_distance: number
         }
         Insert: {
-          created_at?: string | null
-          created_by?: string | null
           id?: string
           name: string
+          created_by: string
+          created_at?: string
+          updated_at?: string
+          description?: string | null
+          goal_distance?: number | null
+          current_distance?: number
         }
         Update: {
-          created_at?: string | null
-          created_by?: string | null
           id?: string
           name?: string
+          created_by?: string
+          created_at?: string
+          updated_at?: string
+          description?: string | null
+          goal_distance?: number | null
+          current_distance?: number
         }
         Relationships: [
           {
             foreignKeyName: "teams_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "users"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
-      user_roles: {
+      user_badges: {
         Row: {
-          created_at: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
           user_id: string
+          badge_id: string
+          earned_at: string
         }
         Insert: {
-          created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
           user_id: string
+          badge_id: string
+          earned_at?: string
         }
         Update: {
-          created_at?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+          badge_id?: string
+          earned_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_badges_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_user_roles: {
-        Args: {
-          _user_id: string
-        }
-        Returns: Database["public"]["Enums"]["app_role"][]
+      check_connection: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      check_badge_requirements: {
+        Args: Record<PropertyKey, never>
+        Returns: unknown
+      }
+      get_db_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       has_role: {
         Args: {
-          _user_id: string
-          _role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+          role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
       }
-      is_team_manager: {
+      update_team_distance: {
         Args: {
           team_id: string
+          distance_to_add: number
         }
-        Returns: boolean
+        Returns: undefined
       }
     }
     Enums: {
-      app_role: "admin" | "user"
-      team_role: "manager" | "member"
+      app_role: "admin" | "user" | "team_manager"
+      badge_tier: "bronze" | "silver" | "gold"
+      activity_type: "rowing" | "strength"
+      media_type: "photo" | "video"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -198,99 +357,6 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
-
-export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
-
-export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row']
+export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T]
+export type Functions<T extends keyof Database['public']['Functions']> = Database['public']['Functions'][T]

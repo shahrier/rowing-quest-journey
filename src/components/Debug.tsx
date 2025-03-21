@@ -1,212 +1,410 @@
-import React, { useState, useEffect } from "react";
-import { X, Bug, ChevronUp, ChevronDown, RefreshCw } from "lucide-react";
+import { useState, useEffect } from 'react';
+import { X, Database, Server, RefreshCw, AlertTriangle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { databaseDiagnostics, DatabaseDiagnosticResult } from '@/utils/databaseDiagnostics';
+import { supabase } from '@/lib/supabase';
 
-interface LogEntry {
-  timestamp: string;
-  message: string;
-  type: "info" | "error" | "warn";
+interface DebugPanelProps {
+  onClose?: () => void;
 }
 
-export function Debug() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [appInfo, setAppInfo] = useState({
-    reactVersion: "",
-    routerVersion: "",
-    environment: import.meta.env.MODE || "unknown",
-    userAgent: navigator.userAgent,
-    screenSize: `${window.innerWidth}x${window.innerHeight}`,
-  });
+export function Debug({ onClose }: DebugPanelProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState<'database' | 'system' | 'network'>('database');
+  const [dbDiagnostics, setDbDiagnostics] = useState<Record<string, DatabaseDiagnosticResult> | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [dbStats, setDbStats] = useState<any>(null);
+  const [systemInfo, setSystemInfo] = useState<any>(null);
+  const [networkInfo, setNetworkInfo] = useState<any>(null);
+  const [jsErrors, setJsErrors] = useState<any[]>([]);
 
-  useEffect(() => {
-    // Capture React version
+  // Run diagnostics
+  const runDiagnostics = async () => {
+    setIsLoading(true);
     try {
-      // @ts-ignore
-      const reactVersion = React.version;
-      setAppInfo(prev => ({ ...prev, reactVersion }));
-    } catch (e) {
-      console.error("Could not determine React version", e);
-    }
-
-    // Intercept console methods
-    const originalConsoleLog = console.log;
-    const originalConsoleError = console.error;
-    const originalConsoleWarn = console.warn;
-
-    console.log = (...args) => {
-      addLog("info", args);
-      originalConsoleLog(...args);
-    };
-
-    console.error = (...args) => {
-      addLog("error", args);
-      originalConsoleError(...args);
-    };
-
-    console.warn = (...args) => {
-      addLog("warn", args);
-      originalConsoleWarn(...args);
-    };
-
-    // Add initial log
-    addLog("info", ["Debug panel initialized"]);
-
-    // Capture global errors
-    const handleGlobalError = (event: ErrorEvent) => {
-      addLog("error", [`Global error: ${event.message} at ${event.filename}:${event.lineno}:${event.colno}`]);
-    };
-
-    window.addEventListener("error", handleGlobalError);
-
-    // Capture unhandled promise rejections
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      addLog("error", [`Unhandled promise rejection: ${event.reason}`]);
-    };
-
-    window.addEventListener("unhandledrejection", handleUnhandledRejection);
-
-    return () => {
-      console.log = originalConsoleLog;
-      console.error = originalConsoleError;
-      console.warn = originalConsoleWarn;
-      window.removeEventListener("error", handleGlobalError);
-      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
-    };
-  }, []);
-
-  const addLog = (type: "info" | "error" | "warn", args: any[]) => {
-    const message = args.map(arg => 
-      typeof arg === "object" ? JSON.stringify(arg) : String(arg)
-    ).join(" ");
-    
-    const timestamp = new Date().toISOString().split("T")[1].split(".")[0];
-    
-    setLogs(prev => [...prev, { timestamp, message, type }]);
-  };
-
-  const clearLogs = () => {
-    setLogs([]);
-    addLog("info", ["Logs cleared"]);
-  };
-
-  const checkDOMStructure = () => {
-    try {
-      const rootElement = document.getElementById("root");
-      if (!rootElement) {
-        addLog("error", ["Root element not found in DOM"]);
-        return;
-      }
-
-      const childCount = rootElement.childElementCount;
-      addLog("info", [`Root element has ${childCount} direct children`]);
-
-      if (childCount === 0) {
-        addLog("warn", ["Root element has no children - React may not be mounting"]);
-      }
-
-      // Check for React DevTools
-      // @ts-ignore
-      const hasReactDevTools = typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined";
-      addLog("info", [`React DevTools ${hasReactDevTools ? "detected" : "not detected"}`]);
-
-      // Check if any elements are visible
-      const visibleElements = document.querySelectorAll("body *:not(script):not(style)");
-      let visibleCount = 0;
-      visibleElements.forEach(el => {
-        const style = window.getComputedStyle(el);
-        if (style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0") {
-          visibleCount++;
-        }
+      const results = await databaseDiagnostics.runAll();
+      setDbDiagnostics(results);
+      
+      const stats = await databaseDiagnostics.getStats();
+      setDbStats(stats);
+      
+      // Collect system info
+      setSystemInfo({
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        screenSize: `${window.screen.width}x${window.screen.height}`,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        devicePixelRatio: window.devicePixelRatio,
+        timestamp: new Date().toISOString(),
+        memory: performance?.memory ? {
+          jsHeapSizeLimit: Math.round(performance.memory.jsHeapSizeLimit / (1024 * 1024)),
+          totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / (1024 * 1024)),
+          usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / (1024 * 1024))
+        } : 'Not available'
       });
       
-      addLog("info", [`${visibleCount} visible elements detected in DOM`]);
+      // Collect network info
+      const connection = (navigator as any).connection;
+      setNetworkInfo({
+        online: navigator.onLine,
+        connectionType: connection?.type || 'unknown',
+        effectiveType: connection?.effectiveType || 'unknown',
+        downlink: connection?.downlink || 'unknown',
+        rtt: connection?.rtt || 'unknown',
+        saveData: connection?.saveData || false,
+        timestamp: new Date().toISOString()
+      });
       
-      if (visibleCount === 0) {
-        addLog("warn", ["No visible elements found - possible CSS issue"]);
-      }
-    } catch (e) {
-      addLog("error", [`Error checking DOM structure: ${e}`]);
+      // Collect JS errors
+      setJsErrors(window.__diagnostics_errors || []);
+    } catch (error) {
+      console.error('Error running diagnostics:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (!isOpen) {
+  useEffect(() => {
+    if (isVisible) {
+      runDiagnostics();
+    }
+  }, [isVisible]);
+
+  // Toggle visibility
+  const toggleVisibility = () => {
+    setIsVisible(!isVisible);
+  };
+
+  // Status indicator component
+  const StatusIndicator = ({ status }: { status: 'success' | 'error' | 'warning' }) => {
+    if (status === 'success') return <CheckCircle className="h-4 w-4 text-green-500" />;
+    if (status === 'error') return <AlertTriangle className="h-4 w-4 text-red-500" />;
+    return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+  };
+
+  // Render debug panel toggle button
+  if (!isVisible) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
-        className="fixed bottom-4 right-4 bg-yellow-500 hover:bg-yellow-600 text-black p-2 rounded-full shadow-lg z-50"
+        onClick={toggleVisibility}
+        className="fixed bottom-4 right-4 bg-slate-800 text-white p-2 rounded-full shadow-lg z-50 flex items-center justify-center"
         title="Open Debug Panel"
       >
-        <Bug size={20} />
+        <Database className="h-5 w-5" />
       </button>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-background border rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
-        <div className="p-4 border-b flex items-center justify-between">
-          <h2 className="font-bold text-lg flex items-center">
-            <Bug className="mr-2" size={20} />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b dark:border-slate-700">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Server className="h-5 w-5" />
             Debug Panel
           </h2>
-          <button onClick={() => setIsOpen(false)} className="text-muted-foreground hover:text-foreground">
-            <X size={20} />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={runDiagnostics}
+              disabled={isLoading}
+              className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Refresh Diagnostics"
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+            <button
+              onClick={() => onClose ? onClose() : setIsVisible(false)}
+              className="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800"
+              title="Close Debug Panel"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Tabs */}
+        <div className="flex border-b dark:border-slate-700">
+          <button
+            onClick={() => setActiveTab('database')}
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'database' 
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+              : 'text-slate-600 dark:text-slate-400'}`}
+          >
+            Database
+          </button>
+          <button
+            onClick={() => setActiveTab('system')}
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'system' 
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+              : 'text-slate-600 dark:text-slate-400'}`}
+          >
+            System
+          </button>
+          <button
+            onClick={() => setActiveTab('network')}
+            className={`px-4 py-2 font-medium text-sm ${activeTab === 'network' 
+              ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400' 
+              : 'text-slate-600 dark:text-slate-400'}`}
+          >
+            Network
           </button>
         </div>
         
-        <div className="p-4 border-b">
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div>
-              <strong>React:</strong> {appInfo.reactVersion || "Unknown"}
+        {/* Content */}
+        <div className="overflow-y-auto p-4 flex-1">
+          {isLoading && (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
             </div>
-            <div>
-              <strong>Env:</strong> {appInfo.environment}
-            </div>
-            <div>
-              <strong>Screen:</strong> {appInfo.screenSize}
-            </div>
-          </div>
+          )}
           
-          <div className="flex gap-2 mt-4">
-            <button 
-              onClick={checkDOMStructure}
-              className="bg-primary text-primary-foreground px-3 py-1 rounded text-sm flex items-center"
-            >
-              Check DOM
-            </button>
-            <button 
-              onClick={clearLogs}
-              className="bg-muted text-muted-foreground px-3 py-1 rounded text-sm flex items-center"
-            >
-              Clear Logs
-            </button>
-            <button 
-              onClick={() => window.location.reload()}
-              className="bg-muted text-muted-foreground px-3 py-1 rounded text-sm flex items-center"
-            >
-              <RefreshCw size={14} className="mr-1" />
-              Reload
-            </button>
-          </div>
+          {!isLoading && activeTab === 'database' && (
+            <div className="space-y-4">
+              {/* Database Connection */}
+              <DiagnosticSection
+                title="Database Connection"
+                status={dbDiagnostics?.connection?.status || 'warning'}
+                details={dbDiagnostics?.connection?.details}
+                message={dbDiagnostics?.connection?.message || 'No data available'}
+              />
+              
+              {/* Database Tables */}
+              <DiagnosticSection
+                title="Database Tables"
+                status={dbDiagnostics?.tables?.status || 'warning'}
+                details={dbDiagnostics?.tables?.details}
+                message={dbDiagnostics?.tables?.message || 'No data available'}
+              />
+              
+              {/* Database Functions */}
+              <DiagnosticSection
+                title="Database Functions"
+                status={dbDiagnostics?.functions?.status || 'warning'}
+                details={dbDiagnostics?.functions?.details}
+                message={dbDiagnostics?.functions?.message || 'No data available'}
+              />
+              
+              {/* Authentication */}
+              <DiagnosticSection
+                title="Authentication"
+                status={dbDiagnostics?.auth?.status || 'warning'}
+                details={dbDiagnostics?.auth?.details}
+                message={dbDiagnostics?.auth?.message || 'No data available'}
+              />
+              
+              {/* Database Stats */}
+              {dbStats && (
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Database Statistics</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {Object.entries(dbStats).map(([key, value]) => (
+                      <div key={key} className="bg-white dark:bg-slate-700 p-2 rounded">
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{key.replace(/_/g, ' ')}</div>
+                        <div className="font-medium">{value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {!isLoading && activeTab === 'system' && (
+            <div className="space-y-4">
+              {/* System Info */}
+              {systemInfo && (
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h3 className="font-medium mb-2">System Information</h3>
+                  <div className="space-y-2">
+                    {Object.entries(systemInfo).map(([key, value]) => {
+                      if (key === 'memory' && typeof value === 'object') {
+                        return (
+                          <div key={key} className="bg-white dark:bg-slate-700 p-2 rounded">
+                            <div className="text-sm font-medium">Memory (MB)</div>
+                            <div className="grid grid-cols-3 gap-2 mt-1">
+                              {Object.entries(value).map(([memKey, memValue]) => (
+                                <div key={memKey} className="text-xs">
+                                  <span className="text-slate-500 dark:text-slate-400">{memKey.replace(/([A-Z])/g, ' $1').trim()}: </span>
+                                  <span className="font-medium">{memValue}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={key} className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                          <div className="text-sm text-slate-500 dark:text-slate-400">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
+                          <div className="font-medium text-sm">{String(value)}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {/* JS Errors */}
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h3 className="font-medium mb-2">JavaScript Errors</h3>
+                {jsErrors.length === 0 ? (
+                  <div className="text-green-500 flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>No errors detected</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {jsErrors.map((error, index) => (
+                      <div key={index} className="bg-white dark:bg-slate-700 p-2 rounded text-xs">
+                        <div className="font-medium text-red-500">{error.message}</div>
+                        <div className="text-slate-500 dark:text-slate-400 mt-1">
+                          {error.timestamp} - {error.filename}:{error.lineno}:{error.colno}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {!isLoading && activeTab === 'network' && (
+            <div className="space-y-4">
+              {/* Network Info */}
+              {networkInfo && (
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <h3 className="font-medium mb-2">Network Information</h3>
+                  <div className="space-y-2">
+                    {Object.entries(networkInfo).map(([key, value]) => (
+                      <div key={key} className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                        <div className="text-sm text-slate-500 dark:text-slate-400">{key.replace(/([A-Z])/g, ' $1').trim()}</div>
+                        <div className="font-medium text-sm">
+                          {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* API Endpoints */}
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h3 className="font-medium mb-2">API Configuration</h3>
+                <div className="space-y-2">
+                  <div className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Supabase URL</div>
+                    <div className="font-medium text-sm">
+                      {import.meta.env.VITE_SUPABASE_URL ? 
+                        `${import.meta.env.VITE_SUPABASE_URL.substring(0, 15)}...` : 
+                        'Not configured'}
+                    </div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Supabase Key</div>
+                    <div className="font-medium text-sm">
+                      {import.meta.env.VITE_SUPABASE_ANON_KEY ? 
+                        `${import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 5)}...` : 
+                        'Not configured'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Environment */}
+              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                <h3 className="font-medium mb-2">Environment</h3>
+                <div className="space-y-2">
+                  <div className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Mode</div>
+                    <div className="font-medium text-sm">{import.meta.env.MODE}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Development</div>
+                    <div className="font-medium text-sm">{import.meta.env.DEV ? 'Yes' : 'No'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Production</div>
+                    <div className="font-medium text-sm">{import.meta.env.PROD ? 'Yes' : 'No'}</div>
+                  </div>
+                  <div className="bg-white dark:bg-slate-700 p-2 rounded flex justify-between">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Base URL</div>
+                    <div className="font-medium text-sm">{import.meta.env.BASE_URL}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
         
-        <div className="flex-1 overflow-auto p-2">
-          <div className="font-mono text-xs space-y-1">
-            {logs.map((log, index) => (
-              <div 
-                key={index} 
-                className={`p-1 rounded ${
-                  log.type === "error" ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300" : 
-                  log.type === "warn" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300" : 
-                  "bg-muted/50"
-                }`}
-              >
-                <span className="opacity-70">[{log.timestamp}]</span> {log.message}
-              </div>
-            ))}
-          </div>
+        {/* Footer */}
+        <div className="border-t dark:border-slate-700 p-4 text-xs text-slate-500 dark:text-slate-400">
+          Last updated: {new Date().toLocaleTimeString()}
         </div>
       </div>
     </div>
   );
+}
+
+// Collapsible diagnostic section component
+function DiagnosticSection({ 
+  title, 
+  status, 
+  message, 
+  details 
+}: { 
+  title: string; 
+  status: 'success' | 'error' | 'warning'; 
+  message: string;
+  details?: any;
+}) {
+  const [isExpanded, setIsExpanded] = useState(status !== 'success');
+  
+  return (
+    <div className="bg-slate-50 dark:bg-slate-800 rounded-lg overflow-hidden">
+      <div 
+        className="p-4 flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-2">
+          <StatusIndicator status={status} />
+          <h3 className="font-medium">{title}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs px-2 py-0.5 rounded ${
+            status === 'success' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+            status === 'error' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+          }`}>
+            {status}
+          </span>
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </div>
+      </div>
+      
+      {isExpanded && (
+        <div className="px-4 pb-4 text-sm">
+          <p className="mb-2">{message}</p>
+          {details && (
+            <pre className="bg-slate-100 dark:bg-slate-700 p-2 rounded text-xs overflow-x-auto">
+              {JSON.stringify(details, null, 2)}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Status indicator component
+function StatusIndicator({ status }: { status: 'success' | 'error' | 'warning' }) {
+  if (status === 'success') return <CheckCircle className="h-4 w-4 text-green-500" />;
+  if (status === 'error') return <AlertTriangle className="h-4 w-4 text-red-500" />;
+  return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+}
+
+// Add global type for error tracking
+declare global {
+  interface Window {
+    __diagnostics_errors?: any[];
+  }
 }

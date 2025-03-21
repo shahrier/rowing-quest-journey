@@ -1,69 +1,79 @@
-# Welcome to your Lovable project
+# Rowing Quest Journey
 
-## Project info
+A virtual rowing journey application that tracks team progress across a virtual Atlantic crossing.
 
-**URL**: https://lovable.dev/projects/cbf1c50e-845b-4af4-bf68-1b2c36e48f76
+## Setup Instructions
 
-## How can I edit this code?
+### Prerequisites
 
-There are several ways of editing your application.
+- Node.js 16+ and npm
+- Supabase account
 
-**Use Lovable**
+### Environment Variables
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cbf1c50e-845b-4af4-bf68-1b2c36e48f76) and start prompting.
+Create a `.env` file in the root directory with the following variables:
 
-Changes made via Lovable will be committed automatically to this repo.
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-**Use your preferred IDE**
+### Database Setup
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Create a new Supabase project
+2. Run the SQL setup script located in `src/scripts/setupDatabase.sql` in the Supabase SQL editor
+3. Set up the admin user by running:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+# Set environment variables
+export SUPABASE_URL=your_supabase_url
+export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+export ADMIN_EMAIL=your_admin_email
 
-Follow these steps:
+# Run the setup script
+npx tsx src/scripts/setupAdmin.ts
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Installation
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+# Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+## Debugging
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+The application includes comprehensive debugging tools:
 
-**Use GitHub Codespaces**
+1. In development mode, a debug panel is available by clicking the debug icon in the bottom right corner
+2. You can also enable debug mode in production by adding `?debug=true` to the URL
+3. The debug panel provides:
+   - Database connection status and diagnostics
+   - System information
+   - Network status
+   - JavaScript error tracking
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project Structure
 
-## What technologies are used for this project?
+- `/src/components` - UI components
+- `/src/contexts` - React context providers
+- `/src/lib` - Core utilities and libraries
+- `/src/integrations` - External service integrations
+- `/src/utils` - Helper functions and utilities
+- `/src/scripts` - Setup and maintenance scripts
 
-This project is built with .
+## Troubleshooting
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+If you encounter database connection issues:
 
-## How can I deploy this project?
+1. Verify your environment variables are correctly set
+2. Check the Supabase project status in your dashboard
+3. Use the debug panel to run diagnostics
+4. Check the browser console for detailed error messages
 
-Simply open [Lovable](https://lovable.dev/projects/cbf1c50e-845b-4af4-bf68-1b2c36e48f76) and click on Share -> Publish.
+## License
 
-## I want to use a custom domain - is that possible?
-
-We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+MIT

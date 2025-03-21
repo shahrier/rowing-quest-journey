@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react';
+import type { Database } from '@/integrations/supabase/types';
 
 // Get environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -22,19 +23,37 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create client with retries
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Create client with proper typing
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
   },
   global: {
-    headers: { 'x-application-name': 'your-app-name' },
+    headers: { 'x-application-name': 'rowing-quest-journey' },
   },
   db: {
     schema: 'public',
   },
 });
+
+// Verify database connection
+export async function verifySupabaseConnection(): Promise<boolean> {
+  try {
+    // Try a simple query that should always work if connected
+    const { data, error } = await supabase.from('profiles').select('count').limit(1);
+    
+    if (error) {
+      console.error('Supabase connection verification failed:', error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Supabase connection error:', error);
+    return false;
+  }
+}
 
 // Simple health check function
 export async function checkHealth() {
@@ -46,8 +65,8 @@ export async function checkHealth() {
       return false;
     }
 
-    // Call the check_connection function to verify the database connection
-    const { data, error: dbError } = await supabase.rpc('check_connection');
+    // Simple query to verify database connection
+    const { data, error: dbError } = await supabase.from('profiles').select('count').limit(1);
 
     if (dbError) {
       console.error('Database check failed:', dbError);
@@ -65,13 +84,25 @@ export async function checkHealth() {
 export function useDatabase() {
   const [status, setStatus] = useState<'checking' | 'connected' | 'error'>('checking');
   const [error, setError] = useState<string | null>(null);
+  const [connectionDetails, setConnectionDetails] = useState<any>(null);
 
   const checkConnection = async () => {
     try {
       setStatus('checking');
       setError(null);
 
-      const isHealthy = await checkHealth();
+      const startTime = performance.now();
+      const isHealthy = await verifySupabaseConnection();
+      const endTime = performance.now();
+      
+      const details = {
+        timestamp: new Date().toISOString(),
+        responseTime: Math.round(endTime - startTime),
+        supabaseUrl: supabaseUrl?.replace(/^(https?:\/\/[^\/]+).*$/, '$1') || 'unknown',
+        authConfigured: !!supabaseAnonKey,
+      };
+      
+      setConnectionDetails(details);
       
       if (isHealthy) {
         setStatus('connected');
@@ -87,6 +118,18 @@ export function useDatabase() {
 
   useEffect(() => {
     checkConnection();
+    
+    // Set up periodic health checks
+    const intervalId = setInterval(() => {
+      verifySupabaseConnection().then(isHealthy => {
+        if (!isHealthy && status === 'connected') {
+          console.warn('Database connection lost, reconnecting...');
+          checkConnection();
+        }
+      });
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(intervalId);
   }, []);
 
   return {
@@ -94,5 +137,6 @@ export function useDatabase() {
     error,
     retry: checkConnection,
     isConnected: status === 'connected',
+    connectionDetails
   };
 }
