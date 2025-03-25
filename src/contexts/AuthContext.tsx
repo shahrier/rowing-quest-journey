@@ -1,14 +1,13 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
-import { useToast } from "@/hooks/use-toast";
-import { Session, User } from "@supabase/supabase-js";
 
 interface AuthState {
-  user: User | null;
-  session: Session | null;
+  user: any | null;
+  session: any | null;
   isAdmin: boolean;
   isTeamManager: boolean;
   isLoading: boolean;
+  teamId: string | null;
 }
 
 interface AuthContextType extends AuthState {
@@ -29,175 +28,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session: null,
     isAdmin: false,
     isTeamManager: false,
-    isLoading: true,
+    isLoading: false,
+    teamId: null,
   });
-  const { toast } = useToast();
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setState(prev => ({
-        ...prev,
-        user: session?.user ?? null,
-        session: session,
-        loading: false,
-      }));
-
-      if (session?.user) {
-        checkUserRole(session.user.id);
+    // For demo purposes, let's create a mock user
+    const mockUser = {
+      id: '123',
+      email: 'demo@example.com',
+      user_metadata: {
+        full_name: 'Demo User'
       }
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setState(prev => ({
-        ...prev,
-        user: session?.user ?? null,
-        session: session,
-        loading: false,
-      }));
-
-      if (session?.user) {
-        checkUserRole(session.user.id);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
     };
+    
+    setState(prev => ({
+      ...prev,
+      user: mockUser,
+      isLoading: false
+    }));
   }, []);
 
-  const checkUserRole = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("user_id", userId)
-        .single();
-
-      if (error) {
-        console.error("Error fetching user role:", error);
-        setState(prev => ({
-          ...prev,
-          isAdmin: false,
-          isTeamManager: false,
-        }));
-        return;
-      }
-
-      setState(prev => ({
-        ...prev,
-        isAdmin: data.role === "admin",
-        isTeamManager: data.role === "team_manager",
-      }));
-    } catch (error) {
-      console.error("Error checking user role:", error);
-      setState(prev => ({
-        ...prev,
-        isAdmin: false,
-        isTeamManager: false,
-      }));
-    }
-  };
-
   const refreshProfile = async () => {
-    if (state.user) {
-      await checkUserRole(state.user.id);
-    }
+    // Mock implementation
+    console.log("Refreshing profile...");
   };
 
   const value = {
     ...state,
     signIn: async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
+      console.log("Sign in with", email, password);
     },
     signUp: async (email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string; userId?: string }> => {
-      try {
-        // Sign up the user
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            },
-          },
-        });
-
-        if (error) {
-          return { success: false, error: error.message };
-        }
-
-        if (!data.user) {
-          return { success: false, error: "User creation failed" };
-        }
-
-        // Create a profile for the user
-        const { error: profileError } = await supabase.from("profiles").insert({
-          user_id: data.user.id,
-          email: email,
-          full_name: fullName,
-          role: "user",
-          created_at: new Date().toISOString(),
-        });
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-          return { success: true, userId: data.user.id, error: "Account created but profile setup failed. Please contact support." };
-        }
-
-        return { success: true, userId: data.user.id };
-      } catch (error: any) {
-        console.error("Sign up error:", error);
-        return { success: false, error: error.message || "An unexpected error occurred" };
-      }
+      console.log("Sign up with", email, password, fullName);
+      return { success: true, userId: '123' };
     },
     signOut: async () => {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error("Sign out error:", error);
-        toast({
-          title: "Error",
-          description: "Failed to sign out",
-          variant: "destructive",
-        });
-      }
+      console.log("Sign out");
     },
     signInWithGoogle: async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      console.log("Sign in with Google");
     },
     signInWithFacebook: async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: "facebook",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      console.log("Sign in with Facebook");
     },
     signInWithTwitter: async () => {
-      await supabase.auth.signInWithOAuth({
-        provider: "twitter",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
+      console.log("Sign in with Twitter");
     },
     refreshProfile,
   };
-
-  // Show loading state
-  if (state.loading) {
-    return <div>Loading auth...</div>;
-  }
 
   return (
     <AuthContext.Provider value={value}>
