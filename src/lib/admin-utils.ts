@@ -1,8 +1,8 @@
 import { supabase } from "./supabase";
 
-export const setupAdminUser = async (email: string): Promise<boolean> => {
+export async function setupAdminUser(email: string): Promise<boolean> {
   try {
-    // First, get the user ID from the email
+    // First, find the user by email
     const { data: userData, error: userError } = await supabase
       .from("profiles")
       .select("user_id")
@@ -14,7 +14,7 @@ export const setupAdminUser = async (email: string): Promise<boolean> => {
       return false;
     }
 
-    if (!userData || !userData.user_id) {
+    if (!userData) {
       console.error("User not found with email:", email);
       return false;
     }
@@ -22,10 +22,7 @@ export const setupAdminUser = async (email: string): Promise<boolean> => {
     // Update the user's role to admin
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ 
-        role: "admin",
-        updated_at: new Date().toISOString()
-      })
+      .update({ role: "admin" })
       .eq("user_id", userData.user_id);
 
     if (updateError) {
@@ -33,10 +30,10 @@ export const setupAdminUser = async (email: string): Promise<boolean> => {
       return false;
     }
 
-    console.log(`User ${email} has been granted admin privileges`);
+    console.log(`User ${email} has been set as admin`);
     return true;
   } catch (error) {
     console.error("Error in setupAdminUser:", error);
     return false;
   }
-};
+}

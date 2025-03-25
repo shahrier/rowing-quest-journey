@@ -1,11 +1,12 @@
 import { Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { RouterProvider } from 'react-router-dom';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { useDatabase } from '@/lib/supabase';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { router } from './routes';
 
 function DatabaseProvider({ children }: { children: React.ReactNode }) {
   const { status, error, retry } = useDatabase();
@@ -42,14 +43,7 @@ function App() {
           <AuthProvider>
             <ThemeProvider>
               <ToastProvider>
-                <BrowserRouter>
-                  <div className="min-h-screen">
-                    <Routes>
-                      <Route path="/" element={<div>Home Page</div>} />
-                      <Route path="/login" element={<div>Login Page</div>} />
-                    </Routes>
-                  </div>
-                </BrowserRouter>
+                <RouterProvider router={router} />
               </ToastProvider>
             </ThemeProvider>
           </AuthProvider>

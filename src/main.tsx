@@ -115,14 +115,17 @@ function initializeApp() {
     }
     
     // Render error fallback
-    root.render(
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center p-4">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Failed to start application</h1>
-          <p className="text-gray-600 mb-4">Please try refreshing the page</p>
+    if (rootElement) {
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <div className="min-h-screen flex items-center justify-center bg-background">
+          <div className="text-center p-4">
+            <h1 className="text-2xl font-bold text-red-500 mb-4">Failed to start application</h1>
+            <p className="text-gray-600 mb-4">Please try refreshing the page</p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 }
 
