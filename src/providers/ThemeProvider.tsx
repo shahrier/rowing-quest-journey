@@ -1,70 +1,66 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 type Theme = "dark" | "light" | "system";
 
-interface ThemeProviderProps {
-  children: ReactNode;
-  defaultTheme?: Theme;
-  storageKey?: string;
-}
+type ThemeProviderProps = {
+  children: React.ReactNode;
+};
 
-interface ThemeProviderState {
+type ThemeProviderState = {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-}
+};
 
-const ThemeContext = createContext<ThemeProviderState | undefined>(undefined);
+const initialState: ThemeProviderState = {
+  theme: "system",
+  setTheme: () => null,
+};
 
-export function ThemeProvider({
-  children,
-  defaultTheme = "system",
-  storageKey = "vite-ui-theme",
-}: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    // Move localStorage read to state initialization
-    const storedTheme = localStorage.getItem(storageKey);
-    return (storedTheme as Theme) || defaultTheme;
-  });
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+export function ThemeProvider({ children }: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(
+    (localStorage.getItem("theme") as Theme) || "system"
+  );
 
   useEffect(() => {
     const root = window.document.documentElement;
-    root.classList.remove('light', 'dark');
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+    root.classList.remove("light", "dark");
+
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
+        ? "dark"
+        : "light";
+
       root.classList.add(systemTheme);
-    } else {
-      root.classList.add(theme);
+      return;
     }
 
-    // Save to localStorage
-    localStorage.setItem(storageKey, theme);
-  }, [theme, storageKey]);
+    root.classList.add(theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
 
-  // Prevent flash of incorrect theme
-  if (!mounted) {
-    return null;
-  }
+  const value = {
+    theme,
+    setTheme: (theme: Theme) => {
+      setTheme(theme);
+    },
+  };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeProviderContext.Provider value={value}>
       {children}
-    </ThemeContext.Provider>
+    </ThemeProviderContext.Provider>
   );
 }
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
+export const useTheme = () => {
+  const context = useContext(ThemeProviderContext);
+
+  if (context === undefined)
+    throw new Error("useTheme must be used within a ThemeProvider");
+
   return context;
-}
+};

@@ -1,60 +1,60 @@
-import { Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@/providers/ThemeProvider';
 import { ToastProvider } from '@/providers/ToastProvider';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { useDatabase } from '@/lib/supabase';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-
-function DatabaseProvider({ children }: { children: React.ReactNode }) {
-  const { status, error, retry } = useDatabase();
-
-  if (status === 'checking') {
-    return <LoadingSpinner />;
-  }
-
-  if (status === 'error') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-500 mb-4">Connection Error</h1>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90"
-            onClick={retry}
-          >
-            Retry Connection
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return <>{children}</>;
-}
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import Login from '@/pages/Login';
+import { Layout } from '@/components/layout/Layout';
+import Dashboard from '@/pages/Dashboard';
+import ProfilePage from '@/pages/ProfilePage';
+import SettingsPage from '@/pages/SettingsPage';
+import TeamPage from '@/pages/TeamPage';
+import AdminPage from '@/pages/AdminPage';
+import TroubleshootingPage from '@/pages/TroubleshootingPage';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<LoadingSpinner />}>
-        <DatabaseProvider>
-          <AuthProvider>
-            <ThemeProvider>
-              <ToastProvider>
-                <BrowserRouter>
-                  <div className="min-h-screen">
-                    <Routes>
-                      <Route path="/" element={<div>Home Page</div>} />
-                      <Route path="/login" element={<div>Login Page</div>} />
-                    </Routes>
-                  </div>
-                </BrowserRouter>
-              </ToastProvider>
-            </ThemeProvider>
-          </AuthProvider>
-        </DatabaseProvider>
-      </Suspense>
+      <AuthProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Layout />}>
+                  <Route index element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="profile" element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="settings" element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="team" element={
+                    <ProtectedRoute>
+                      <TeamPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="admin" element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="troubleshooting" element={<TroubleshootingPage />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </ToastProvider>
+        </ThemeProvider>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }
